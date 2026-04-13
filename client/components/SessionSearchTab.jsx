@@ -24,7 +24,7 @@ export default function SessionSearchTab({ project }) {
   const inputRef = useRef(null)
 
   async function search(q) {
-    if (!q || q.trim().length < 2) return
+    if (!q || q.trim().length < 1) return
     setLoading(true); setSearched(true)
     const res = await fetch(`/api/projects/${project.id}/search?q=${encodeURIComponent(q)}`)
     setResults(await res.json())
@@ -48,8 +48,8 @@ export default function SessionSearchTab({ project }) {
           autoFocus
           style={{ flex: 1, padding: '8px 12px', fontSize: 14, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)' }}
         />
-        <button onClick={() => search(query)} disabled={loading || query.trim().length < 2}
-          style={{ padding: '8px 18px', fontSize: 13, borderRadius: 6, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', opacity: query.trim().length < 2 ? 0.5 : 1 }}>
+        <button onClick={() => search(query)} disabled={loading || query.trim().length < 1}
+          style={{ padding: '8px 18px', fontSize: 13, borderRadius: 6, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', opacity: query.trim().length < 1 ? 0.5 : 1 }}>
           {loading ? '搜索中...' : '搜索'}
         </button>
       </div>

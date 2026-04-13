@@ -3,7 +3,7 @@ import { join, basename } from 'path'
 import { getClaudeProjectDir } from './sessions.js'
 
 export function searchSessions(projectPath, query, limit = 50) {
-  if (!query || query.trim().length < 2) return []
+  if (!query || query.trim().length < 1) return []
   const dir = getClaudeProjectDir(projectPath)
   if (!existsSync(dir)) return []
 
@@ -67,4 +67,21 @@ export function searchSessions(projectPath, query, limit = 50) {
 
   // 按匹配数降序排列
   return results.sort((a, b) => b.matchCount - a.matchCount)
+}
+
+// 全局搜索：跨所有项目，结果按项目分组
+export function searchAllSessions(projects, query, limitPerProject = 20) {
+  if (!query || query.trim().length < 1) return []
+  const grouped = []
+  for (const proj of projects) {
+    const results = searchSessions(proj.path, query, limitPerProject)
+    if (results.length > 0) {
+      grouped.push({ id: proj.id, name: proj.name, path: proj.path, results })
+    }
+  }
+  // 按各项目总匹配数降序
+  return grouped.sort((a, b) =>
+    b.results.reduce((s, r) => s + r.matchCount, 0) -
+    a.results.reduce((s, r) => s + r.matchCount, 0)
+  )
 }

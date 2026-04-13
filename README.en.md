@@ -28,6 +28,16 @@ A local web UI for managing multiple [Claude Code](https://claude.ai/code) proje
 
 ## Installation
 
+**One-line install (recommended):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Evason-yang/Claude-code-dashboard/main/install.sh | bash
+```
+
+The script checks dependencies, clones the repo, installs packages, builds the frontend, and asks if you want to start immediately. Run the same command again to update to the latest version.
+
+**Manual install:**
+
 ```bash
 git clone https://github.com/Evason-yang/Claude-code-dashboard.git
 cd Claude-code-dashboard

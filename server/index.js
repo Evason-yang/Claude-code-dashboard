@@ -9,7 +9,7 @@ import { listSessions, getSession } from './sessions.js'
 import { getGitLog } from './git.js'
 import { listMemories, getMemory, saveMemory, deleteMemory } from './memories.js'
 import { listGlobalMcpServers, listProjectMcpServers, saveGlobalMcpServer, saveProjectMcpServer, deleteGlobalMcpServer, deleteProjectMcpServer } from './mcp.js'
-import { searchSessions } from './search.js'
+import { searchSessions, searchAllSessions } from './search.js'
 import { readPrompt, writePrompt } from './prompts.js'
 import { readToolPerms, writeToolPerms } from './toolperms.js'
 import { listCommands, saveCommand, deleteCommand } from './commands.js'
@@ -258,6 +258,15 @@ app.get('/api/projects/:id/search', (req, res) => {
   const proj = getProjectById(buildProjectList(cfg), req.params.id)
   if (!proj) return res.status(404).json({ error: 'Not found' })
   res.json(searchSessions(proj.path, q))
+})
+
+// 全局跨项目搜索
+app.get('/api/search', (req, res) => {
+  const { q } = req.query
+  if (!q) return res.json([])
+  const cfg = loadConfig()
+  const projects = buildProjectList(cfg)
+  res.json(searchAllSessions(projects, q))
 })
 
 // --- Memories ---

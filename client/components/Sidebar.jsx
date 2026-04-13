@@ -17,6 +17,7 @@ const S = {
 
 const globalNav = [
   { label: '总览', icon: '◈', path: '/dashboard' },
+  { label: '全局搜索', icon: '🔍', path: '/search' },
   { label: '模型管理', icon: '◇', path: '/models' },
   { label: '用量统计', icon: '◉', path: '/usage' },
   { label: 'Skill 管理', icon: '◆', path: '/skills' },
@@ -152,9 +153,30 @@ export default function Sidebar({ projects, onProjectsReorder }) {
     else alert('添加失败，请检查路径是否存在')
   }
 
+  const navigate = useNavigate()
+  const [searchInput, setSearchInput] = useState('')
+
+  function handleSearchKey(e) {
+    if (e.key === 'Enter' && searchInput.trim().length >= 1) {
+      navigate(`/search?q=${encodeURIComponent(searchInput.trim())}`)
+      setSearchInput('')
+    }
+  }
+
   return (
     <div style={S.sidebar}>
       <div style={S.appName}>Claude Code 管理器</div>
+
+      {/* 快捷搜索框 */}
+      <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)' }}>
+        <input
+          value={searchInput}
+          onChange={e => setSearchInput(e.target.value)}
+          onKeyDown={handleSearchKey}
+          placeholder="搜索会话... (Enter)"
+          style={{ width: '100%', padding: '5px 8px', fontSize: 11, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }}
+        />
+      </div>
 
       <div style={S.section}>
         <div style={S.sectionTitle}>工具</div>

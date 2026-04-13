@@ -26,6 +26,16 @@
 
 ## 安装
 
+**一键安装（推荐）：**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Evason-yang/Claude-code-dashboard/main/install.sh | bash
+```
+
+脚本会自动检查依赖、克隆仓库、安装依赖、构建前端，并询问是否立即启动。再次运行同一命令可更新到最新版本。
+
+**手动安装：**
+
 ```bash
 git clone https://github.com/Evason-yang/Claude-code-dashboard.git
 cd Claude-code-dashboard
