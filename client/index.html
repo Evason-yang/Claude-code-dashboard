@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Claude Code 项目管理器</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      :root {
+        --bg: #ffffff; --bg2: #f6f8fa; --bg3: #eaeef2;
+        --border: #d0d7de; --text: #1f2328; --text2: #57606a;
+        --accent: #0969da; --accent-bg: #dbeafe;
+        --green: #1a7f37; --red: #cf222e;
+        --font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      html.dark {
+        color-scheme: dark;
+        --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
+        --border: #30363d; --text: #e6edf3; --text2: #8b949e;
+        --accent: #58a6ff; --accent-bg: #1f3a5f;
+        --green: #3fb950; --red: #f85149;
+      }
+      html.light { color-scheme: light; }
+      body { font-family: var(--font); background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+      #root { height: 100vh; display: flex; }
+    </style>
+    <script>
+      // 初始化主题：读取 localStorage，否则跟随系统
+      (function() {
+        const saved = localStorage.getItem('theme')
+        if (saved === 'dark') document.documentElement.classList.add('dark')
+        else if (saved === 'light') document.documentElement.classList.add('light')
+        else {
+          // 跟随系统
+          if (window.matchMedia('(prefers-color-scheme: dark)').matches)
+            document.documentElement.classList.add('dark')
+          else
+            document.documentElement.classList.add('light')
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/main.jsx"></script>
+  </body>
+</html>
