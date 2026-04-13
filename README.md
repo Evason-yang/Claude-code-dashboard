@@ -1,30 +1,30 @@
 # Claude Code Dashboard
 
-A local web UI for managing multiple [Claude Code](https://claude.ai/code) projects. View session history, token usage, memories, skills, MCP servers, hooks, and more — all in one place.
+[English](README.en.md)
 
-![Dashboard Screenshot](docs/screenshot-dashboard.png)
+一个用于管理多个 [Claude Code](https://claude.ai/code) 项目的本地 Web 界面。在一个地方查看会话历史、Token 用量、记忆文件、Skill 插件、MCP 服务器、Hooks 配置等所有内容。
 
-## Features
+## 功能特性
 
-- **Project Overview** — All your Claude Code projects with last activity, token usage, and model breakdown
-- **Session History** — Browse and search conversation history with full message display, including sub-agent calls
-- **Token Usage** — Charts by model and project, with minute/hour/day granularity and time range filters
-- **Memory Management** — View and edit Claude Code memory files (CLAUDE.md, per-project memories)
-- **Model Management** — Switch the global default model
-- **Skill Management** — Browse installed skills from plugins and `~/.claude/skills/`
-- **MCP Server Management** — Add, edit, and remove MCP servers (global and per-project)
-- **Hooks Management** — Configure Claude Code lifecycle hooks (SessionStart, PreToolUse, etc.)
-- **Tool Permissions** — Manage per-project allow/deny rules
-- **Slash Commands** — Create and manage custom slash commands
-- **Dark / Light mode** — Follows system or manual toggle
+- **项目总览** — 所有 Claude Code 项目的最近活动、Token 用量和模型分布图表
+- **会话历史** — 浏览并搜索完整对话记录，支持展示子 Agent 调用详情
+- **Token 用量统计** — 按模型和项目分类的图表，支持分钟/小时/天粒度和时间范围筛选
+- **记忆管理** — 查看和编辑 Claude Code 记忆文件（全局 CLAUDE.md 及项目级记忆）
+- **模型管理** — 切换全局默认模型
+- **Skill 管理** — 浏览来自插件和 `~/.claude/skills/` 的已安装 Skill
+- **MCP 服务器管理** — 添加、编辑和删除 MCP 服务器（全局和项目级）
+- **Hooks 管理** — 配置 Claude Code 生命周期钩子（SessionStart、PreToolUse 等）
+- **工具权限** — 管理每个项目的 allow/deny 规则
+- **Slash Commands** — 创建和管理自定义斜杠命令
+- **深色 / 浅色模式** — 跟随系统或手动切换
 
-## Requirements
+## 环境要求
 
-- **macOS** (uses `~/.claude/` directory structure)
+- **macOS**（依赖 `~/.claude/` 目录结构）
 - **Node.js 18+**
-- **Claude Code** installed and used at least once (to have session data)
+- **Claude Code** 已安装并至少使用过一次（需要有会话数据）
 
-## Installation
+## 安装
 
 ```bash
 git clone https://github.com/Evason-yang/Claude-code-dashboard.git
@@ -33,47 +33,47 @@ npm install
 npm start
 ```
 
-The app builds the frontend and opens `http://localhost:3000` automatically.
+应用会自动构建前端并打开 `http://localhost:3000`。
 
-## Development
+## 开发模式
 
 ```bash
-npm run dev        # Start both backend (port 3000) and frontend (Vite, port 5173) with hot reload
-npm test           # Run backend unit tests
-npm run build      # Build frontend only
+npm run dev     # 同时启动后端（端口 3000）和前端（Vite，端口 5173），支持热更新
+npm test        # 运行后端单元测试
+npm run build   # 仅构建前端
 ```
 
-## First Launch
+## 首次启动
 
-On first launch, a setup dialog appears asking you to add a directory to scan for projects. Enter a path like `~/Projects` — the app will discover any directory that has been used with Claude Code.
+首次启动时会弹出引导对话框，填入要扫描的目录（如 `~/Projects`），应用会自动发现其中所有使用过 Claude Code 的项目。
 
-You can also manually add individual project paths at any time from the sidebar.
+也可以随时通过侧边栏底部的「+ 添加项目」手动添加单个项目路径。
 
-## Data Sources
+## 数据来源
 
-All data is read from local files — nothing is sent to any server:
+所有数据均从本地文件读取，不会向任何服务器发送：
 
-| Data | Location |
-|------|----------|
-| Session history | `~/.claude/projects/<encoded-path>/*.jsonl` |
-| Token usage | Parsed from session files |
-| Memories | `~/.claude/projects/<encoded-path>/memory/` |
-| Global settings | `~/.claude/settings.json` |
-| Project settings | `.claude/settings.local.json` in each project |
-| MCP servers | `~/conf.json` (global) and `~/.claude.json` (per-project) |
-| Skills | `~/.claude/plugins/` and `~/.claude/skills/` |
+| 数据 | 位置 |
+|------|------|
+| 会话历史 | `~/.claude/projects/<编码路径>/*.jsonl` |
+| Token 用量 | 从会话文件解析 |
+| 记忆文件 | `~/.claude/projects/<编码路径>/memory/` |
+| 全局设置 | `~/.claude/settings.json` |
+| 项目设置 | 各项目的 `.claude/settings.local.json` |
+| MCP 服务器 | `~/conf.json`（全局）和 `~/.claude.json`（项目级）|
+| Skill 插件 | `~/.claude/plugins/` 和 `~/.claude/skills/` |
 
-## Tech Stack
+## 技术栈
 
-- **Backend**: Node.js + Express (ESM)
-- **Frontend**: React 18 + Vite + React Router 6
-- **No database** — reads directly from Claude Code's local files
-- **No external dependencies** beyond npm packages
+- **后端**：Node.js + Express（ESM）
+- **前端**：React 18 + Vite + React Router 6
+- **无数据库** — 直接读取 Claude Code 的本地文件
+- **零外部服务依赖**
 
-## Contributing
+## 贡献
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-## License
+## 开源协议
 
-MIT — see [LICENSE](LICENSE).
+MIT — 见 [LICENSE](LICENSE)。
