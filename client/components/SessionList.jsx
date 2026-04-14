@@ -62,15 +62,19 @@ const PRESETS = [
   { label: '全部', days: 0 },
 ]
 
+const PAGE_SIZE = 30
+
 export default function SessionList({ project, refreshKey }) {
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [preset, setPreset] = useState(30)
   const [since, setSince] = useState(daysAgo(30))
   const [until, setUntil] = useState(toISO(new Date()))
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
   useEffect(() => {
     setLoading(true)
+    setVisibleCount(PAGE_SIZE)
     fetch(`/api/projects/${project.id}/sessions`)
       .then(r => r.json())
       .then(data => { setSessions(data); setLoading(false) })
@@ -78,6 +82,7 @@ export default function SessionList({ project, refreshKey }) {
 
   function applyPreset(days) {
     setPreset(days)
+    setVisibleCount(PAGE_SIZE)
     if (days === 0) { setSince(''); setUntil('') }
     else { setSince(daysAgo(days)); setUntil(toISO(new Date())) }
   }
@@ -122,7 +127,17 @@ export default function SessionList({ project, refreshKey }) {
             </div>
             {filtered.length === 0
               ? <div style={{ color: 'var(--text2)', fontSize: 13 }}>该时间段内暂无会话</div>
-              : filtered.map(s => <SessionItem key={s.id} session={s} projectId={project.id} />)
+              : <>
+                  {filtered.slice(0, visibleCount).map(s => <SessionItem key={s.id} session={s} projectId={project.id} />)}
+                  {filtered.length > visibleCount && (
+                    <button
+                      onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+                      style={{ width: '100%', padding: '8px 0', fontSize: 12, color: 'var(--text2)', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', marginTop: 4 }}
+                    >
+                      加载更多（剩余 {filtered.length - visibleCount} 条）
+                    </button>
+                  )}
+                </>
             }
           </>
       }

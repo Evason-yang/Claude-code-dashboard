@@ -1,6 +1,26 @@
-import { readdirSync, readFileSync, existsSync } from 'fs'
+import { readdirSync, readFileSync, existsSync, statSync } from 'fs'
 import { join, basename } from 'path'
 import os from 'os'
+
+const sessionCache = new Map()
+const SESSION_CACHE_MAX = 100
+
+function cacheSet(key, value) {
+  if (sessionCache.size >= SESSION_CACHE_MAX) {
+    // Delete oldest entry (Map preserves insertion order)
+    sessionCache.delete(sessionCache.keys().next().value)
+  }
+  sessionCache.set(key, value)
+}
+
+function getCacheKey(filePath) {
+  try {
+    const mtime = statSync(filePath).mtimeMs
+    return `${filePath}:${mtime}`
+  } catch {
+    return null
+  }
+}
 
 // Claude Code 把会话存在 ~/.claude/projects/<encoded-path>/
 // 编码规则：所有 / 替换为 -（保留开头那个 -）
@@ -57,7 +77,12 @@ export function listSessions(projectPath) {
     return files
       .map(f => {
         const id = basename(f, '.jsonl')
-        const lines = parseLines(readFileSync(join(dir, f), 'utf8'))
+        const filePath = join(dir, f)
+        const cacheKey = getCacheKey(filePath)
+        if (cacheKey && sessionCache.has(cacheKey)) {
+          return sessionCache.get(cacheKey)
+        }
+        const lines = parseLines(readFileSync(filePath, 'utf8'))
         let title = '（无内容）'
         let messageCount = 0
         let inputTokens = 0, outputTokens = 0, cacheRead = 0, cacheCreate = 0
@@ -86,13 +111,15 @@ export function listSessions(projectPath) {
           }
         }
 
-        return {
+        const entry = {
           id, title, messageCount,
           createdAt: firstTs, updatedAt: lastTs,
           models: [...models],
           usage: { inputTokens, outputTokens, cacheRead, cacheCreate,
                    total: inputTokens + outputTokens + cacheRead + cacheCreate }
         }
+        if (cacheKey) cacheSet(cacheKey, entry)
+        return entry
       })
       .sort((a, b) => {
         if (!a.updatedAt) return 1
@@ -108,6 +135,10 @@ export function getSession(projectPath, sessionId) {
   const dir = getClaudeProjectDir(projectPath)
   const filePath = join(dir, `${sessionId}.jsonl`)
   if (!existsSync(filePath)) return []
+  const cacheKey = getCacheKey(filePath)
+  if (cacheKey && sessionCache.has(cacheKey)) {
+    return sessionCache.get(cacheKey)
+  }
   const lines = parseLines(readFileSync(filePath, 'utf8'))
   const result = []
 
@@ -198,5 +229,6 @@ export function getSession(projectPath, sessionId) {
     }
   }
 
+  if (cacheKey) cacheSet(cacheKey, result)
   return result
 }

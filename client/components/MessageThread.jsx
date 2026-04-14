@@ -16,6 +16,22 @@ export const MODEL_COLORS = {
 const AGENT_TYPE_LABELS = {
   'general-purpose': '通用', 'Explore': '探索', 'Plan': '规划',
   'claude-code-guide': '指南', 'superpowers:code-reviewer': '代码审查',
+  'superpowers:brainstorm': '头脑风暴', 'superpowers:brainstorming': '头脑风暴',
+  'superpowers:debugging': '调试', 'superpowers:systematic-debugging': '系统调试',
+  'superpowers:writing-plans': '编写计划', 'superpowers:executing-plans': '执行计划',
+  'superpowers:test-driven-development': 'TDD', 'superpowers:verification-before-completion': '验证',
+  'superpowers:dispatching-parallel-agents': '并行派遣', 'superpowers:subagent-driven-development': '子代理开发',
+  'superpowers:finishing-a-development-branch': '完成分支', 'superpowers:receiving-code-review': '接收审查',
+  'superpowers:requesting-code-review': '请求审查', 'superpowers:using-git-worktrees': 'Git Worktree',
+  'superpowers:writing-skills': '编写 Skill', 'superpowers:using-superpowers': '超能力',
+  'superpowers:execute-plan': '执行计划', 'superpowers:write-plan': '编写计划',
+}
+
+function agentTypeLabel(type) {
+  if (!type) return 'Agent'
+  if (AGENT_TYPE_LABELS[type]) return AGENT_TYPE_LABELS[type]
+  const suffix = type.includes(':') ? type.split(':').pop() : type
+  return suffix.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase())
 }
 
 export function fmt(n) {
@@ -67,7 +83,7 @@ export function ModelBadge({ model }) {
 // Agent 调用卡片
 export function AgentBlock({ callMsg, resultMsg }) {
   const [open, setOpen] = useState(false)
-  const typeLabel = AGENT_TYPE_LABELS[callMsg.subagent_type] || callMsg.subagent_type || 'Agent'
+  const typeLabel = agentTypeLabel(callMsg.subagent_type)
   return (
     <div style={{ borderLeft: '2px solid var(--accent)', paddingLeft: 10, margin: '2px 0' }}>
       <div

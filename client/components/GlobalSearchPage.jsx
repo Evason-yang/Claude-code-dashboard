@@ -16,6 +16,18 @@ function highlight(text, query) {
   )
 }
 
+const HISTORY_KEY = 'cc-search-history'
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]') } catch { return [] }
+}
+function addToHistory(q) {
+  const h = getHistory().filter(x => x !== q)
+  h.unshift(q)
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0, 10)))
+}
+
+const PAGE_SIZE = 5
+
 export default function GlobalSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [query, setQuery] = useState(searchParams.get('q') || '')
@@ -23,6 +35,9 @@ export default function GlobalSearchPage() {
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
   const [expanded, setExpanded] = useState({})
+  const [showHistory, setShowHistory] = useState(false)
+  const [history, setHistory] = useState(getHistory)
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const inputRef = useRef(null)
   const navigate = useNavigate()
 
@@ -37,45 +52,103 @@ export default function GlobalSearchPage() {
       setLoading(true)
       setSearched(true)
       setExpanded({})
+      setVisibleCount(PAGE_SIZE)
       fetch(`/api/search?q=${encodeURIComponent(q)}`)
         .then(r => r.json())
-        .then(data => { setResults(data); setLoading(false) })
+        .then(data => {
+          setResults(data)
+          setLoading(false)
+          addToHistory(q)
+          setHistory(getHistory())
+        })
     }
   }, [searchParams.get('q')])
 
   async function doSearch(q) {
     if (!q || q.trim().length < 1) return
+    setShowHistory(false)
     setSearchParams({ q })  // 更新 URL，触发上面的 useEffect
   }
 
   function handleKey(e) {
     if (e.key === 'Enter') doSearch(query)
+    if (e.key === 'Escape') setShowHistory(false)
+  }
+
+  function removeHistoryItem(e, item) {
+    e.stopPropagation()
+    const updated = getHistory().filter(x => x !== item)
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated))
+    setHistory(updated)
+  }
+
+  function clearHistory() {
+    localStorage.removeItem(HISTORY_KEY)
+    setHistory([])
+    setShowHistory(false)
   }
 
   const totalSessions = results.reduce((s, g) => s + g.results.length, 0)
   const totalMatches = results.reduce((s, g) => s + g.results.reduce((ss, r) => ss + r.matchCount, 0), 0)
+  const visibleResults = results.slice(0, visibleCount)
 
   return (
     <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
       <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>全局会话搜索</div>
 
       {/* 搜索框 */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        <input
-          ref={inputRef}
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={handleKey}
-          placeholder="搜索所有项目的会话内容..."
-          style={{ flex: 1, padding: '10px 14px', fontSize: 14, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', outline: 'none' }}
-        />
-        <button
-          onClick={() => doSearch(query)}
-          disabled={loading || query.trim().length < 1}
-          style={{ padding: '10px 22px', fontSize: 13, borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', opacity: query.trim().length < 1 ? 0.5 : 1, fontWeight: 500 }}
-        >
-          {loading ? '搜索中...' : '搜索'}
-        </button>
+      <div style={{ position: 'relative', marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={handleKey}
+            onFocus={() => { if (history.length > 0) setShowHistory(true) }}
+            onBlur={() => setTimeout(() => setShowHistory(false), 200)}
+            placeholder="搜索所有项目的会话内容..."
+            style={{ flex: 1, padding: '10px 14px', fontSize: 14, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', outline: 'none' }}
+          />
+          <button
+            onClick={() => doSearch(query)}
+            disabled={loading || query.trim().length < 1}
+            style={{ padding: '10px 22px', fontSize: 13, borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', opacity: query.trim().length < 1 ? 0.5 : 1, fontWeight: 500 }}
+          >
+            {loading ? '搜索中...' : '搜索'}
+          </button>
+        </div>
+
+        {/* 历史下拉 */}
+        {showHistory && history.length > 0 && (
+          <div style={{ position: 'absolute', top: '100%', left: 0, right: 56, marginTop: 4, background: 'var(--bg-secondary, var(--bg2))', border: '1px solid var(--border)', borderRadius: 8, zIndex: 100, overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+            {history.map(item => (
+              <div
+                key={item}
+                onMouseDown={() => { setQuery(item); doSearch(item) }}
+                style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', cursor: 'pointer', gap: 8 }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3, var(--border))'}
+                onMouseLeave={e => e.currentTarget.style.background = ''}
+              >
+                <span style={{ fontSize: 13, flex: 1, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {item}
+                </span>
+                <span
+                  onMouseDown={e => removeHistoryItem(e, item)}
+                  style={{ fontSize: 12, color: 'var(--text2)', cursor: 'pointer', padding: '0 2px', lineHeight: 1 }}
+                  title="删除"
+                >×</span>
+              </div>
+            ))}
+            <div
+              onMouseDown={clearHistory}
+              style={{ padding: '7px 14px', fontSize: 12, color: 'var(--text2)', cursor: 'pointer', borderTop: '1px solid var(--border)', textAlign: 'center' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3, var(--border))'}
+              onMouseLeave={e => e.currentTarget.style.background = ''}
+            >
+              清除全部
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 结果统计 */}
@@ -89,7 +162,7 @@ export default function GlobalSearchPage() {
       )}
 
       {/* 按项目分组结果 */}
-      {results.map(group => (
+      {visibleResults.map(group => (
         <div key={group.id} style={{ marginBottom: 24 }}>
           {/* 项目标题 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -154,6 +227,18 @@ export default function GlobalSearchPage() {
           })}
         </div>
       ))}
+
+      {/* 显示更多 */}
+      {results.length > visibleCount && (
+        <div style={{ textAlign: 'center', marginTop: 8 }}>
+          <button
+            onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+            style={{ padding: '8px 24px', fontSize: 13, borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', cursor: 'pointer' }}
+          >
+            显示更多项目（还有 {results.length - visibleCount} 个）
+          </button>
+        </div>
+      )}
     </div>
   )
 }

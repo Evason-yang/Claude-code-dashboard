@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useToast } from './Toast.jsx'
 
 const TYPE_COLORS = {
   user:      '#58a6ff',
@@ -16,9 +17,10 @@ export default function MemoryEditor({ projectId, memory, onClose, onSaved }) {
   const [description, setDescription] = useState(memory?.description || '')
   const [content, setContent] = useState(memory?.content || '')
   const [saving, setSaving] = useState(false)
+  const { showToast } = useToast()
 
   async function handleSave() {
-    if (!name.trim()) return alert('标题不能为空')
+    if (!name.trim()) return showToast('标题不能为空', 'error')
     setSaving(true)
     const url = isEdit
       ? `/api/projects/${projectId}/memories/${encodeURIComponent(memory.file)}`
@@ -30,8 +32,8 @@ export default function MemoryEditor({ projectId, memory, onClose, onSaved }) {
       body: JSON.stringify({ name: name.trim(), type, description: description.trim(), content })
     })
     setSaving(false)
-    if (res.ok) { onSaved(); onClose() }
-    else alert('保存失败')
+    if (res.ok) { showToast(isEdit ? '记忆已保存' : '记忆已创建', 'success'); onSaved(); onClose() }
+    else showToast('保存失败', 'error')
   }
 
   return (

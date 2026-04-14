@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useToast } from './Toast.jsx'
 
 const S = {
   page: { flex: 1, overflow: 'auto', padding: 24 },
@@ -25,6 +26,7 @@ export default function SkillsPage() {
   const [loading, setLoading] = useState(true)
   const [installInput, setInstallInput] = useState('')
   const [installing, setInstalling] = useState(false)
+  const { showToast } = useToast()
 
   function load() {
     fetch('/api/skills').then(r => r.json()).then(d => { setPlugins(d); setLoading(false) }).catch(() => setLoading(false))
@@ -45,15 +47,16 @@ export default function SkillsPage() {
     const val = installInput.trim()
     if (!val) return
     setInstalling(true)
-    const source = val.startsWith('http') ? 'url' : 'path'
+    const isUrl = val.startsWith('http') || /^[\w.-]+\/[\w.-]+$/.test(val)
+    const source = isUrl ? 'url' : 'path'
     const res = await fetch('/api/skills/install', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ source, value: val })
     })
     setInstalling(false)
-    if (res.ok) { setInstallInput(''); load() }
-    else alert('安装失败，请检查路径或 URL')
+    if (res.ok) { showToast('安装成功', 'success'); setInstallInput(''); load() }
+    else showToast('安装失败，请检查路径或 URL', 'error')
   }
 
   if (loading) return <div style={S.page}><div style={S.empty}>加载中...</div></div>
@@ -69,7 +72,7 @@ export default function SkillsPage() {
       <div style={S.installRow}>
         <input
           style={S.input}
-          placeholder="输入本地路径或 URL 安装新插件"
+          placeholder="本地路径、GitHub URL 或 owner/repo"
           value={installInput}
           onChange={e => setInstallInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && installSkill()}

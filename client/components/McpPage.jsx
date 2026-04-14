@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
+import { useToast } from './Toast.jsx'
 
-function McpEditor({ server, scope, projectId, projects, onClose, onSaved }) {
+function McpEditor({ server, scope, projectId, projects, onClose, onSaved, onError, onSuccess }) {
   const isEdit = !!server
   const [name, setName] = useState(server?.name || '')
   const [type, setType] = useState(server?.url ? 'http' : 'stdio')
@@ -22,7 +23,7 @@ function McpEditor({ server, scope, projectId, projects, onClose, onSaved }) {
   }
 
   async function save() {
-    if (!name.trim()) return alert('名称不能为空')
+    if (!name.trim()) return onError('名称不能为空')
     setSaving(true)
     const body = {
       scope: selScope,
@@ -36,8 +37,10 @@ function McpEditor({ server, scope, projectId, projects, onClose, onSaved }) {
     }
     const url2 = isEdit ? `/api/mcp/${encodeURIComponent(server.name)}` : '/api/mcp'
     const method = isEdit ? 'PUT' : 'POST'
-    await fetch(url2, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    setSaving(false); onSaved(); onClose()
+    const res = await fetch(url2, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    setSaving(false)
+    if (res.ok) { onSuccess(isEdit ? 'MCP Server 已保存' : 'MCP Server 已添加'); onSaved(); onClose() }
+    else onError('保存失败')
   }
 
   const lbl = { fontSize: 11, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }
@@ -163,6 +166,7 @@ export default function McpPage() {
   const [projectId, setProjectId] = useState('')
   const [loading, setLoading] = useState(true)
   const [editor, setEditor] = useState(null)  // null | 'new' | server对象
+  const { showToast } = useToast()
 
   useEffect(() => {
     fetch('/api/projects').then(r => r.json()).then(ps => {
@@ -184,7 +188,9 @@ export default function McpPage() {
     if (!window.confirm(`删除 MCP Server「${server.name}」？`)) return
     const params = new URLSearchParams({ scope: server.scope })
     if (server.scope === 'project' && projectId) params.set('projectId', projectId)
-    await fetch(`/api/mcp/${encodeURIComponent(server.name)}?${params}`, { method: 'DELETE' })
+    const res = await fetch(`/api/mcp/${encodeURIComponent(server.name)}?${params}`, { method: 'DELETE' })
+    if (res.ok) showToast(`已删除「${server.name}」`, 'success')
+    else showToast('删除失败', 'error')
     load()
   }
 
@@ -243,6 +249,8 @@ export default function McpPage() {
           projects={projects}
           onClose={() => setEditor(null)}
           onSaved={load}
+          onError={msg => showToast(msg, 'error')}
+          onSuccess={msg => showToast(msg, 'success')}
         />
       )}
     </div>

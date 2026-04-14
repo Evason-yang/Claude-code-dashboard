@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, existsSync } from 'fs'
 import { join, basename } from 'path'
 import { getClaudeProjectDir } from './sessions.js'
 
-export function searchSessions(projectPath, query, limit = 50) {
+export function searchSessions(projectPath, query, limit = 200) {
   if (!query || query.trim().length < 1) return []
   const dir = getClaudeProjectDir(projectPath)
   if (!existsSync(dir)) return []
@@ -43,12 +43,12 @@ export function searchSessions(projectPath, query, limit = 50) {
           if (text.toLowerCase().includes(q)) {
             // 提取匹配片段（前后各 60 字符）
             const idx = text.toLowerCase().indexOf(q)
-            const start = Math.max(0, idx - 60)
-            const end = Math.min(text.length, idx + query.length + 60)
+            const start = Math.max(0, idx - 120)
+            const end = Math.min(text.length, idx + query.length + 120)
             const snippet = (start > 0 ? '...' : '') + text.slice(start, end) + (end < text.length ? '...' : '')
             matches.push({ role: msg.role, snippet, timestamp: ts })
           }
-        } catch { /* skip */ }
+        } catch (e) { console.error('[warn]', e.message) }
       }
 
       if (matches.length > 0) {
@@ -57,20 +57,20 @@ export function searchSessions(projectPath, query, limit = 50) {
           title: sessionTitle,
           sessionTs,
           matchCount: matches.length,
-          matches: matches.slice(0, 3)  // 每个会话最多返回 3 条匹配片段
+          matches: matches.slice(0, 5)  // 每个会话最多返回 5 条匹配片段
         })
       }
 
       if (results.length >= limit) break
     }
-  } catch { /* skip */ }
+  } catch (e) { console.error('[warn]', e.message) }
 
   // 按匹配数降序排列
   return results.sort((a, b) => b.matchCount - a.matchCount)
 }
 
 // 全局搜索：跨所有项目，结果按项目分组
-export function searchAllSessions(projects, query, limitPerProject = 20) {
+export function searchAllSessions(projects, query, limitPerProject = 50) {
   if (!query || query.trim().length < 1) return []
   const grouped = []
   for (const proj of projects) {

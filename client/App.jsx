@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { ToastProvider } from './components/Toast.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import ProjectDetail from './components/ProjectDetail.jsx'
 import OnboardingModal from './components/OnboardingModal.jsx'
@@ -50,7 +51,7 @@ export default function App() {
   )
 
   return (
-    <>
+    <ToastProvider>
       {showOnboarding && <OnboardingModal onClose={handleOnboardingClose} />}
       <Sidebar projects={projects} onProjectsReorder={setProjects} />
       <Routes>
@@ -68,6 +69,6 @@ export default function App() {
         <Route path="/projects/:id/*" element={<ProjectDetail projects={projects} />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
-    </>
+    </ToastProvider>
   )
 }

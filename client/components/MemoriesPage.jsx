@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import MemoryEditor from './MemoryEditor.jsx'
+import { useToast } from './Toast.jsx'
 
 const TYPE_COLORS = {
   user: '#58a6ff', feedback: '#f0883e', project: '#3fb950',
@@ -20,6 +21,7 @@ export default function MemoriesPage() {
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState({})
   const [editor, setEditor] = useState(null)  // { projectId, memory | null }
+  const { showToast } = useToast()
 
   function load() {
     setLoading(true)
@@ -36,7 +38,9 @@ export default function MemoriesPage() {
 
   async function handleDelete(projectId, memory) {
     if (!window.confirm(`确认删除「${memory.name}」？`)) return
-    await fetch(`/api/projects/${projectId}/memories/${encodeURIComponent(memory.file)}`, { method: 'DELETE' })
+    const res = await fetch(`/api/projects/${projectId}/memories/${encodeURIComponent(memory.file)}`, { method: 'DELETE' })
+    if (res.ok) showToast(`已删除「${memory.name}」`, 'success')
+    else showToast('删除失败', 'error')
     load()
   }
 

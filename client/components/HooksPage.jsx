@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useToast } from './Toast.jsx'
 
 const HOOK_EVENTS = ['SessionStart', 'PreToolUse', 'PostToolUse', 'Stop', 'Notification']
 
@@ -57,6 +58,7 @@ export default function HooksPage() {
   const [saved, setSaved] = useState(false)
   const [editor, setEditor] = useState(null)  // { event, ruleIdx } | null
   const [addingEvent, setAddingEvent] = useState(null)
+  const { showToast } = useToast()
 
   function load() {
     setLoading(true)
@@ -67,9 +69,10 @@ export default function HooksPage() {
 
   async function saveAll(updated) {
     setSaving(true)
-    await fetch('/api/hooks', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hooks: updated }) })
-    setSaving(false); setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    const res = await fetch('/api/hooks', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hooks: updated }) })
+    setSaving(false)
+    if (res.ok) { showToast('Hooks 已保存', 'success'); setSaved(true); setTimeout(() => setSaved(false), 2000) }
+    else showToast('保存失败', 'error')
   }
 
   function addRule(event, rule) {

@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useToast } from './Toast.jsx'
 
 const MODEL_COLORS = {
   'claude-opus-4-6': '#58a6ff',
@@ -117,32 +118,53 @@ const S = {
 
 export default function Dashboard({ projects }) {
   const navigate = useNavigate()
+  const { showToast } = useToast()
   const [usage, setUsage] = useState(null)
   const [refreshKey, setRefreshKey] = React.useState(0)
 
   useEffect(() => {
-    fetch('/api/usage').then(r => r.json()).then(setUsage).catch(() => {})
+    fetch('/api/usage').then(r => r.json()).then(setUsage).catch(() => showToast('加载用量数据失败', 'error'))
   }, [refreshKey])
 
-  const totalTokens = (usage?.totalInputTokens || 0) + (usage?.totalOutputTokens || 0)
-  const byModel = (usage?.byModel || []).filter(m => m.model !== '<synthetic>' && (m.input + m.output) > 0)
-  const maxModelTokens = Math.max(...byModel.map(m => m.input + m.output), 1)
+  const totalTokens = useMemo(
+    () => (usage?.totalInputTokens || 0) + (usage?.totalOutputTokens || 0),
+    [usage]
+  )
+  const byModel = useMemo(
+    () => (usage?.byModel || []).filter(m => m.model !== '<synthetic>' && (m.input + m.output) > 0),
+    [usage]
+  )
+  const maxModelTokens = useMemo(
+    () => Math.max(...byModel.map(m => m.input + m.output), 1),
+    [byModel]
+  )
 
-  const pieData = byModel.map(m => ({
+  const pieData = useMemo(() => byModel.map(m => ({
     value: m.input + m.output,
     color: MODEL_COLORS[m.model] || MODEL_COLORS.default,
     label: m.model.replace('claude-', '')
-  }))
+  })), [byModel])
 
   // 项目活跃度条形图数据
-  const projectBarData = (usage?.byProject || [])
+  const projectBarData = useMemo(() => (usage?.byProject || [])
     .slice(0, 6)
     .map(p => ({
       label: p.name,
       value: p.inputTokens + p.outputTokens,
       color: 'var(--accent)'
-    }))
-  const maxProjTokens = Math.max(...projectBarData.map(d => d.value), 1)
+    })), [usage])
+  const maxProjTokens = useMemo(
+    () => Math.max(...projectBarData.map(d => d.value), 1),
+    [projectBarData]
+  )
+
+  const sortedRecentProjects = useMemo(() =>
+    [...projects]
+      .filter(p => p.lastActive)
+      .sort((a, b) => new Date(b.lastActive) - new Date(a.lastActive))
+      .slice(0, 8),
+    [projects]
+  )
 
   return (
     <div style={S.page}>
@@ -268,11 +290,7 @@ export default function Dashboard({ projects }) {
         <div style={{ marginTop: 24 }}>
           <div style={S.sectionTitle}>最近活动</div>
           <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-            {[...projects]
-              .filter(p => p.lastActive)
-              .sort((a, b) => new Date(b.lastActive) - new Date(a.lastActive))
-              .slice(0, 8)
-              .map((p, i, arr) => {
+            {sortedRecentProjects.map((p, i, arr) => {
                 const d = new Date(p.lastActive)
                 const pad = n => String(n).padStart(2, '0')
                 const timeStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`

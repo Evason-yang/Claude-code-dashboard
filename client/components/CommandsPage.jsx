@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useToast } from './Toast.jsx'
 
 const btn = (primary) => ({
   padding: '6px 14px', fontSize: 12, borderRadius: 5, cursor: 'pointer',
@@ -85,6 +86,7 @@ export default function CommandsPage() {
   const [commands, setCommands] = useState([])
   const [editor, setEditor] = useState(null)
   const [expanded, setExpanded] = useState(null)
+  const { showToast } = useToast()
 
   useEffect(() => {
     fetch('/api/projects').then(r => r.json()).then(setProjects)
@@ -101,7 +103,9 @@ export default function CommandsPage() {
     if (!window.confirm(`删除命令 /${cmd.name}？`)) return
     const params = new URLSearchParams({ scope: cmd.scope })
     if (projectId) params.set('projectId', projectId)
-    await fetch(`/api/commands/${encodeURIComponent(cmd.file)}?${params}`, { method: 'DELETE' })
+    const res = await fetch(`/api/commands/${encodeURIComponent(cmd.file)}?${params}`, { method: 'DELETE' })
+    if (res.ok) showToast(`已删除命令 /${cmd.name}`, 'success')
+    else showToast('删除失败', 'error')
     load()
   }
 

@@ -15,43 +15,108 @@ function highlight(text, query) {
   )
 }
 
+const HISTORY_KEY = 'cc-search-history'
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]') } catch { return [] }
+}
+function addToHistory(q) {
+  const h = getHistory().filter(x => x !== q)
+  h.unshift(q)
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0, 10)))
+}
+
 export default function SessionSearchTab({ project }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
   const [expanded, setExpanded] = useState({})
+  const [showHistory, setShowHistory] = useState(false)
+  const [history, setHistory] = useState(getHistory)
   const inputRef = useRef(null)
 
   async function search(q) {
     if (!q || q.trim().length < 1) return
+    setShowHistory(false)
     setLoading(true); setSearched(true)
     const res = await fetch(`/api/projects/${project.id}/search?q=${encodeURIComponent(q)}`)
     setResults(await res.json())
     setLoading(false)
+    addToHistory(q)
+    setHistory(getHistory())
   }
 
   function handleKey(e) {
     if (e.key === 'Enter') search(query)
+    if (e.key === 'Escape') setShowHistory(false)
+  }
+
+  function removeHistoryItem(e, item) {
+    e.stopPropagation()
+    const updated = getHistory().filter(x => x !== item)
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated))
+    setHistory(updated)
+  }
+
+  function clearHistory() {
+    localStorage.removeItem(HISTORY_KEY)
+    setHistory([])
+    setShowHistory(false)
   }
 
   return (
     <div>
       {/* 搜索框 */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        <input
-          ref={inputRef}
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={handleKey}
-          placeholder="搜索会话内容..."
-          autoFocus
-          style={{ flex: 1, padding: '8px 12px', fontSize: 14, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)' }}
-        />
-        <button onClick={() => search(query)} disabled={loading || query.trim().length < 1}
-          style={{ padding: '8px 18px', fontSize: 13, borderRadius: 6, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', opacity: query.trim().length < 1 ? 0.5 : 1 }}>
-          {loading ? '搜索中...' : '搜索'}
-        </button>
+      <div style={{ position: 'relative', marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={handleKey}
+            onFocus={() => { if (history.length > 0) setShowHistory(true) }}
+            onBlur={() => setTimeout(() => setShowHistory(false), 200)}
+            placeholder="搜索会话内容..."
+            autoFocus
+            style={{ flex: 1, padding: '8px 12px', fontSize: 14, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)' }}
+          />
+          <button onClick={() => search(query)} disabled={loading || query.trim().length < 1}
+            style={{ padding: '8px 18px', fontSize: 13, borderRadius: 6, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', opacity: query.trim().length < 1 ? 0.5 : 1 }}>
+            {loading ? '搜索中...' : '搜索'}
+          </button>
+        </div>
+
+        {/* 历史下拉 */}
+        {showHistory && history.length > 0 && (
+          <div style={{ position: 'absolute', top: '100%', left: 0, right: 80, marginTop: 4, background: 'var(--bg-secondary, var(--bg2))', border: '1px solid var(--border)', borderRadius: 6, zIndex: 100, overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+            {history.map(item => (
+              <div
+                key={item}
+                onMouseDown={() => { setQuery(item); search(item) }}
+                style={{ display: 'flex', alignItems: 'center', padding: '7px 12px', cursor: 'pointer', gap: 8 }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3, var(--border))'}
+                onMouseLeave={e => e.currentTarget.style.background = ''}
+              >
+                <span style={{ fontSize: 13, flex: 1, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {item}
+                </span>
+                <span
+                  onMouseDown={e => removeHistoryItem(e, item)}
+                  style={{ fontSize: 12, color: 'var(--text2)', cursor: 'pointer', padding: '0 2px', lineHeight: 1 }}
+                  title="删除"
+                >×</span>
+              </div>
+            ))}
+            <div
+              onMouseDown={clearHistory}
+              style={{ padding: '6px 12px', fontSize: 12, color: 'var(--text2)', cursor: 'pointer', borderTop: '1px solid var(--border)', textAlign: 'center' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3, var(--border))'}
+              onMouseLeave={e => e.currentTarget.style.background = ''}
+            >
+              清除全部
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 结果 */}

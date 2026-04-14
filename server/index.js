@@ -1,7 +1,7 @@
 import express from 'express'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { existsSync, readdirSync, readFileSync, copyFileSync, mkdirSync } from 'fs'
+import { existsSync, readdirSync, readFileSync, copyFileSync, mkdirSync, statSync } from 'fs'
 import os from 'os'
 import { loadConfig, saveConfig } from './config.js'
 import { buildProjectList, getProjectById } from './projects.js'
@@ -370,6 +370,8 @@ app.post('/api/open-terminal', (req, res) => {
 })
 
 // --- Usage ---
+const usageCache = new Map()
+
 // 定价（USD per token），claude-opus-4-6
 const MODEL_PRICES = {
   'claude-opus-4-6':   { input: 15 / 1e6,  output: 75 / 1e6 },
@@ -391,34 +393,50 @@ function parseUsageRecords(claudeDir, since, until) {
   if (!existsSync(claudeDir)) return records
   try {
     for (const f of readdirSync(claudeDir).filter(f => f.endsWith('.jsonl'))) {
-      for (const line of readFileSync(join(claudeDir, f), 'utf8').trim().split('\n')) {
-        try {
-          const obj = JSON.parse(line)
-          const msg = obj.message || {}
-          const model = msg.model
-          const usage = msg.usage
-          const ts = obj.timestamp
-          if (!model || !usage || !ts) continue
-          if (model === '<synthetic>') continue
-          // date 用本地时间（ts 是 UTC，转本地日期用于 day 粒度分组）
-          const _localD = new Date(ts)
-          const _p = n => String(n).padStart(2, '0')
-          const date = `${_localD.getFullYear()}-${_p(_localD.getMonth()+1)}-${_p(_localD.getDate())}`
-          // since/until 来自前端本地时间（如 2026-04-12T18:00），ts 是 UTC ISO（如 2026-04-12T10:00:00.000Z）
-          // 统一转成 Date 对象再比较，避免时区偏差
-          if (since && new Date(ts) < new Date(since)) continue
-          if (until && new Date(ts) > new Date(until)) continue
-          records.push({
-            date, ts, model,
-            input: usage.input_tokens || 0,
-            output: usage.output_tokens || 0,
-            cacheRead: usage.cache_read_input_tokens || 0,
-            cacheCreate: usage.cache_creation_input_tokens || 0
-          })
-        } catch { /* skip */ }
+      const filePath = join(claudeDir, f)
+      let fileRecords
+      try {
+        const mtime = statSync(filePath).mtimeMs
+        const cacheKey = `${filePath}:${mtime}`
+        if (usageCache.has(cacheKey)) {
+          fileRecords = usageCache.get(cacheKey)
+        } else {
+          fileRecords = []
+          for (const line of readFileSync(filePath, 'utf8').trim().split('\n')) {
+            try {
+              const obj = JSON.parse(line)
+              const msg = obj.message || {}
+              const model = msg.model
+              const usage = msg.usage
+              const ts = obj.timestamp
+              if (!model || !usage || !ts) continue
+              if (model === '<synthetic>') continue
+              // date 用本地时间（ts 是 UTC，转本地日期用于 day 粒度分组）
+              const _localD = new Date(ts)
+              const _p = n => String(n).padStart(2, '0')
+              const date = `${_localD.getFullYear()}-${_p(_localD.getMonth()+1)}-${_p(_localD.getDate())}`
+              fileRecords.push({
+                date, ts, model,
+                input: usage.input_tokens || 0,
+                output: usage.output_tokens || 0,
+                cacheRead: usage.cache_read_input_tokens || 0,
+                cacheCreate: usage.cache_creation_input_tokens || 0
+              })
+            } catch (e) { console.error('[warn]', e.message) }
+          }
+          usageCache.set(cacheKey, fileRecords)
+        }
+      } catch (e) { console.error('[warn]', e.message); fileRecords = [] }
+      // Apply since/until filter after cache lookup
+      // since/until 来自前端本地时间（如 2026-04-12T18:00），ts 是 UTC ISO（如 2026-04-12T10:00:00.000Z）
+      // 统一转成 Date 对象再比较，避免时区偏差
+      for (const r of fileRecords) {
+        if (since && new Date(r.ts) < new Date(since)) continue
+        if (until && new Date(r.ts) > new Date(until)) continue
+        records.push(r)
       }
     }
-  } catch { /* skip */ }
+  } catch (e) { console.error('[warn]', e.message) }
   return records
 }
 
@@ -773,8 +791,33 @@ app.post('/api/skills/install', (req, res) => {
       readdirSync(value).forEach(f => copyFileSync(join(value, f), join(dest, f)))
       res.json({ ok: true })
     } catch (e) { res.status(500).json({ error: e.message }) }
+  } else if (source === 'url') {
+    let url = value.trim()
+    // Normalize owner/repo shorthand to full GitHub URL
+    if (!url.startsWith('http')) {
+      if (/^[\w.-]+\/[\w.-]+$/.test(url)) {
+        url = `https://github.com/${url}`
+      } else {
+        return res.status(400).json({ error: 'Invalid URL or owner/repo format' })
+      }
+    }
+    // Extract repo name from URL
+    const repoName = url.replace(/\.git$/, '').split('/').pop()
+    if (!repoName) return res.status(400).json({ error: 'Cannot determine repo name from URL' })
+    const dest = join(LOCAL_SKILLS_DIR, repoName)
+    try {
+      const { execSync } = await import('child_process')
+      if (!existsSync(dest)) {
+        execSync(`git clone ${url} ${dest}`, { timeout: 30000 })
+      } else {
+        execSync(`git -C ${dest} pull`, { timeout: 30000 })
+      }
+      res.json({ ok: true, name: repoName })
+    } catch (e) {
+      res.status(500).json({ error: e.message || 'git operation failed' })
+    }
   } else {
-    res.status(501).json({ error: 'URL install not yet implemented' })
+    res.status(400).json({ error: 'Unknown source type' })
   }
 })
 

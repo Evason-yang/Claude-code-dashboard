@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
+import { useToast } from './Toast.jsx'
 
 const MODEL_COLORS = {
   'claude-opus-4-6': '#58a6ff',
@@ -249,6 +250,7 @@ export default function UsagePage({ projectId, embedded }) {
   const [since, setSince] = useState(daysAgo(7))
   const [until, setUntil] = useState(toLocalDT(new Date()))
   const [tab, setTab] = useState('model')
+  const { showToast } = useToast()
 
   const load = useCallback(() => {
     setLoading(true)
@@ -259,7 +261,7 @@ export default function UsagePage({ projectId, embedded }) {
     fetch(`/api/usage?${params}`)
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false) })
-      .catch(() => setLoading(false))
+      .catch(() => { setLoading(false); showToast('加载用量数据失败', 'error') })
   }, [since, until, projectId])
 
   useEffect(() => { load() }, [load])
