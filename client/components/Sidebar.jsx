@@ -90,8 +90,9 @@ function getInitialTheme() {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
-export default function Sidebar({ projects, onProjectsReorder }) {
+export default function Sidebar({ projects, onProjectsReorder, onRefresh }) {
   const [dragOverPath, setDragOverPath] = useState(null)
+  const [refreshing, setRefreshing] = useState(false)
   const dragItem = useRef(null)
   const [theme, setTheme] = useState(getInitialTheme)
   const [projectFilter, setProjectFilter] = useState('')
@@ -197,6 +198,17 @@ export default function Sidebar({ projects, onProjectsReorder }) {
           <div style={{ ...S.sectionTitle, display: 'flex', alignItems: 'center', gap: 4 }}>
             项目
             <span style={{ fontSize: 10, color: 'var(--text2)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>· 拖拽排序</span>
+            <button
+              onClick={async () => {
+                setRefreshing(true)
+                await onRefresh()
+                setRefreshing(false)
+              }}
+              title="刷新项目列表"
+              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text2)', fontSize: 12, padding: '0 2px', lineHeight: 1, opacity: refreshing ? 0.4 : 0.7, transition: 'opacity 0.1s', display: 'flex', alignItems: 'center' }}
+            >
+              <span style={{ display: 'inline-block', transform: refreshing ? 'rotate(360deg)' : 'none', transition: refreshing ? 'transform 0.6s linear' : 'none' }}>⟳</span>
+            </button>
           </div>
           {projects.length > 5 && (
             <div style={{ padding: '4px 12px 6px' }}>

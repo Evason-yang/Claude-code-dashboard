@@ -53,7 +53,7 @@ export default function App() {
   return (
     <ToastProvider>
       {showOnboarding && <OnboardingModal onClose={handleOnboardingClose} />}
-      <Sidebar projects={projects} onProjectsReorder={setProjects} />
+      <Sidebar projects={projects} onProjectsReorder={setProjects} onRefresh={fetchProjects} />
       <Routes>
         <Route path="/dashboard" element={<Dashboard projects={projects} />} />
         <Route path="/models" element={<ModelsPage />} />
