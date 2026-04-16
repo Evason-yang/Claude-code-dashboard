@@ -3,7 +3,50 @@ import { join } from 'path'
 import os from 'os'
 import { encodePath } from './sessions.js'
 
-const GLOBAL_MEMORY_DIR = join(process.env.HOME || os.homedir(), '.claude', 'memory')
+const HOME = process.env.HOME || os.homedir()
+const GLOBAL_MEMORY_DIR = join(HOME, '.claude', 'memory')
+const GLOBAL_CLAUDE_MD = join(HOME, '.claude', 'CLAUDE.md')
+
+const SYNC_BEGIN = '<!-- claude-dashboard:global-memories:begin -->'
+const SYNC_END = '<!-- claude-dashboard:global-memories:end -->'
+
+function syncGlobalMemoriesToClaudeMd() {
+  const memories = listGlobalMemories()
+
+  // 构建同步区块内容
+  let block = ''
+  if (memories.length > 0) {
+    const sections = memories.map(m => {
+      const lines = [`## ${m.name}`]
+      if (m.description) lines.push(`> ${m.description}`)
+      if (m.content) lines.push('', m.content)
+      return lines.join('\n')
+    })
+    block = `${SYNC_BEGIN}\n# Global Memories\n\n${sections.join('\n\n---\n\n')}\n\n${SYNC_END}`
+  } else {
+    block = `${SYNC_BEGIN}\n${SYNC_END}`
+  }
+
+  // 读取现有 CLAUDE.md，替换或追加区块
+  let existing = ''
+  if (existsSync(GLOBAL_CLAUDE_MD)) {
+    existing = readFileSync(GLOBAL_CLAUDE_MD, 'utf8')
+  }
+
+  if (existing.includes(SYNC_BEGIN)) {
+    // 替换已有区块
+    const updated = existing.replace(
+      new RegExp(`${SYNC_BEGIN}[\\s\\S]*?${SYNC_END}`),
+      block
+    )
+    writeFileSync(GLOBAL_CLAUDE_MD, updated)
+  } else {
+    // 追加到末尾（空行分隔）
+    const sep = existing && !existing.endsWith('\n\n') ? (existing.endsWith('\n') ? '\n' : '\n\n') : ''
+    mkdirSync(join(HOME, '.claude'), { recursive: true })
+    writeFileSync(GLOBAL_CLAUDE_MD, existing + sep + block + '\n')
+  }
+}
 
 function getMemoryDir(projectPath) {
   return join(
@@ -126,6 +169,7 @@ export function saveGlobalMemory(existingFile, { name, type, description, conten
   }
   writeFileSync(join(GLOBAL_MEMORY_DIR, file), buildFrontmatter(name, type, description) + content)
   rebuildIndex(GLOBAL_MEMORY_DIR)
+  syncGlobalMemoriesToClaudeMd()
   return file
 }
 
@@ -133,4 +177,5 @@ export function deleteGlobalMemory(file) {
   const path = join(GLOBAL_MEMORY_DIR, file)
   if (existsSync(path)) unlinkSync(path)
   rebuildIndex(GLOBAL_MEMORY_DIR)
+  syncGlobalMemoriesToClaudeMd()
 }
