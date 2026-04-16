@@ -22,9 +22,10 @@ export default function MemoryEditor({ projectId, memory, onClose, onSaved }) {
   async function handleSave() {
     if (!name.trim()) return showToast('标题不能为空', 'error')
     setSaving(true)
-    const url = isEdit
-      ? `/api/projects/${projectId}/memories/${encodeURIComponent(memory.file)}`
-      : `/api/projects/${projectId}/memories`
+    const isGlobal = projectId === '__global__'
+    const url = isGlobal
+      ? (isEdit ? `/api/global-memories/${encodeURIComponent(memory.file)}` : '/api/global-memories')
+      : (isEdit ? `/api/projects/${projectId}/memories/${encodeURIComponent(memory.file)}` : `/api/projects/${projectId}/memories`)
     const method = isEdit ? 'PUT' : 'POST'
     const res = await fetch(url, {
       method,

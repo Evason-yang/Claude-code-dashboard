@@ -3,6 +3,8 @@ import { join } from 'path'
 import os from 'os'
 import { encodePath } from './sessions.js'
 
+const GLOBAL_MEMORY_DIR = join(process.env.HOME || os.homedir(), '.claude', 'memory')
+
 function getMemoryDir(projectPath) {
   return join(
     process.env.HOME || os.homedir(),
@@ -91,4 +93,44 @@ export function deleteMemory(projectPath, file) {
   const path = join(dir, file)
   if (existsSync(path)) unlinkSync(path)
   rebuildIndex(dir)
+}
+
+// --- 全局记忆（~/.claude/memory/）---
+export function listGlobalMemories() {
+  if (!existsSync(GLOBAL_MEMORY_DIR)) return []
+  try {
+    return readdirSync(GLOBAL_MEMORY_DIR)
+      .filter(f => f.endsWith('.md') && f !== 'MEMORY.md')
+      .map(f => {
+        const parsed = parseFrontmatter(readFileSync(join(GLOBAL_MEMORY_DIR, f), 'utf8'))
+        return { file: f, ...parsed }
+      })
+      .sort((a, b) => a.name.localeCompare(b.name))
+  } catch { return [] }
+}
+
+export function getGlobalMemory(file) {
+  const path = join(GLOBAL_MEMORY_DIR, file)
+  if (!existsSync(path)) return null
+  return { file, ...parseFrontmatter(readFileSync(path, 'utf8')) }
+}
+
+export function saveGlobalMemory(existingFile, { name, type, description, content }) {
+  mkdirSync(GLOBAL_MEMORY_DIR, { recursive: true })
+  let file = existingFile
+  if (!file) {
+    let base = slugify(name)
+    file = `${base}.md`
+    let n = 2
+    while (existsSync(join(GLOBAL_MEMORY_DIR, file))) { file = `${base}_${n++}.md` }
+  }
+  writeFileSync(join(GLOBAL_MEMORY_DIR, file), buildFrontmatter(name, type, description) + content)
+  rebuildIndex(GLOBAL_MEMORY_DIR)
+  return file
+}
+
+export function deleteGlobalMemory(file) {
+  const path = join(GLOBAL_MEMORY_DIR, file)
+  if (existsSync(path)) unlinkSync(path)
+  rebuildIndex(GLOBAL_MEMORY_DIR)
 }

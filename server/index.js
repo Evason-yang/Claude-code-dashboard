@@ -7,7 +7,7 @@ import { loadConfig, saveConfig } from './config.js'
 import { buildProjectList, getProjectById } from './projects.js'
 import { listSessions, getSession } from './sessions.js'
 import { getGitLog } from './git.js'
-import { listMemories, getMemory, saveMemory, deleteMemory } from './memories.js'
+import { listMemories, getMemory, saveMemory, deleteMemory, listGlobalMemories, getGlobalMemory, saveGlobalMemory, deleteGlobalMemory } from './memories.js'
 import { listGlobalMcpServers, listProjectMcpServers, saveGlobalMcpServer, saveProjectMcpServer, deleteGlobalMcpServer, deleteProjectMcpServer } from './mcp.js'
 import { searchSessions, searchAllSessions } from './search.js'
 import { readPrompt, writePrompt } from './prompts.js'
@@ -317,10 +317,37 @@ app.delete('/api/projects/:id/memories/:file', (req, res) => {
 app.get('/api/memories', (req, res) => {
   const cfg = loadConfig()
   const projects = buildProjectList(cfg)
-  const result = projects
-    .map(p => ({ id: p.id, name: p.name, memories: listMemories(p.path) }))
-    .filter(p => p.memories.length > 0)
+  const result = [
+    { id: '__global__', name: '全局记忆', memories: listGlobalMemories() },
+    ...projects
+      .map(p => ({ id: p.id, name: p.name, memories: listMemories(p.path) }))
+      .filter(p => p.memories.length > 0)
+  ]
   res.json(result)
+})
+
+// --- 全局记忆 CRUD ---
+app.get('/api/global-memories', (req, res) => {
+  res.json(listGlobalMemories())
+})
+
+app.post('/api/global-memories', (req, res) => {
+  const { name, type, description, content } = req.body
+  if (!name) return res.status(400).json({ error: 'name is required' })
+  const file = saveGlobalMemory(null, { name, type: type || 'user', description: description || '', content: content || '' })
+  res.json({ ok: true, file })
+})
+
+app.put('/api/global-memories/:file', (req, res) => {
+  const { name, type, description, content } = req.body
+  if (!name) return res.status(400).json({ error: 'name is required' })
+  saveGlobalMemory(req.params.file, { name, type: type || 'user', description: description || '', content: content || '' })
+  res.json({ ok: true })
+})
+
+app.delete('/api/global-memories/:file', (req, res) => {
+  deleteGlobalMemory(req.params.file)
+  res.json({ ok: true })
 })
 
 // --- Config ---

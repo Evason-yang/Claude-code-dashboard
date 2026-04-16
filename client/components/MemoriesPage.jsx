@@ -38,7 +38,10 @@ export default function MemoriesPage() {
 
   async function handleDelete(projectId, memory) {
     if (!window.confirm(`确认删除「${memory.name}」？`)) return
-    const res = await fetch(`/api/projects/${projectId}/memories/${encodeURIComponent(memory.file)}`, { method: 'DELETE' })
+    const url = projectId === '__global__'
+      ? `/api/global-memories/${encodeURIComponent(memory.file)}`
+      : `/api/projects/${projectId}/memories/${encodeURIComponent(memory.file)}`
+    const res = await fetch(url, { method: 'DELETE' })
     if (res.ok) showToast(`已删除「${memory.name}」`, 'success')
     else showToast('删除失败', 'error')
     load()
@@ -60,16 +63,22 @@ export default function MemoriesPage() {
         ? <div style={{ color: 'var(--text2)', fontSize: 13 }}>加载中...</div>
         : groups.length === 0
           ? <div style={{ color: 'var(--text2)', fontSize: 13 }}>暂无记忆数据</div>
-          : groups.map(g => (
+          : groups.map((g, gi) => (
               <div key={g.id} style={{ marginBottom: 24 }}>
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 8 }}>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>{g.name}</div>
+                  {g.id === '__global__' && (
+                    <span style={{ fontSize: 10, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 3, padding: '1px 5px' }}>~/.claude/memory/</span>
+                  )}
                   <div style={{ fontSize: 11, color: 'var(--text2)' }}>{g.memories.length} 条</div>
                   <button
                     onClick={() => setEditor({ projectId: g.id, memory: null })}
                     style={{ marginLeft: 'auto', padding: '3px 10px', fontSize: 11, borderRadius: 4, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer' }}
                   >+ 新建</button>
                 </div>
+                {g.id === '__global__' && g.memories.length === 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--text2)', padding: '10px 0', fontStyle: 'italic' }}>暂无全局记忆，点击「+ 新建」创建跨项目共享记忆</div>
+                )}
                 {g.memories.map(m => {
                   const key = `${g.id}:${m.file}`
                   return (
