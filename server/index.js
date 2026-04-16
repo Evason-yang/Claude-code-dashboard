@@ -13,6 +13,7 @@ import { searchSessions, searchAllSessions } from './search.js'
 import { readPrompt, writePrompt } from './prompts.js'
 import { readToolPerms, writeToolPerms } from './toolperms.js'
 import { listCommands, saveCommand, deleteCommand } from './commands.js'
+import { execSync } from 'child_process'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -833,7 +834,6 @@ app.post('/api/skills/install', (req, res) => {
     if (!repoName) return res.status(400).json({ error: 'Cannot determine repo name from URL' })
     const dest = join(LOCAL_SKILLS_DIR, repoName)
     try {
-      const { execSync } = await import('child_process')
       if (!existsSync(dest)) {
         execSync(`git clone ${url} ${dest}`, { timeout: 30000 })
       } else {
