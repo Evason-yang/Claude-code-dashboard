@@ -21,16 +21,17 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [showOnboarding, setShowOnboarding] = useState(false)
 
-  async function fetchProjects() {
+  async function fetchProjects({ showLoading = false } = {}) {
+    if (showLoading) setLoading(true)
     const res = await fetch('/api/projects')
     const data = await res.json()
     setProjects(data)
-    setLoading(false)
+    if (showLoading) setLoading(false)
     return data
   }
 
   useEffect(() => {
-    fetchProjects().then(data => {
+    fetchProjects({ showLoading: true }).then(data => {
       const cfg = fetch('/api/config').then(r => r.json()).then(c => {
         if (c.scanDirs.length === 0 && c.manualProjects.length === 0) {
           setShowOnboarding(true)
