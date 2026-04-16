@@ -207,8 +207,9 @@ export function MessageThread({ projectId, sessionId, maxHeight = 520 }) {
     fetch(`/api/projects/${projectId}/sessions/${sessionId}`)
       .then(r => r.json())
       .then(msgs => {
-        messageCache.set(cacheKey, msgs)
-        setMessages(msgs)
+        const safe = Array.isArray(msgs) ? msgs : []
+        messageCache.set(cacheKey, safe)
+        setMessages(safe)
       })
   }, [projectId, sessionId])
 

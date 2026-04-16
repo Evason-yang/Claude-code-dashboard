@@ -79,8 +79,9 @@ export function listSessions(projectPath) {
         const id = basename(f, '.jsonl')
         const filePath = join(dir, f)
         const cacheKey = getCacheKey(filePath)
-        if (cacheKey && sessionCache.has(cacheKey)) {
-          return sessionCache.get(cacheKey)
+        const listCacheKey = cacheKey ? `list:${cacheKey}` : null
+        if (listCacheKey && sessionCache.has(listCacheKey)) {
+          return sessionCache.get(listCacheKey)
         }
         const lines = parseLines(readFileSync(filePath, 'utf8'))
         let title = '（无内容）'
@@ -118,7 +119,7 @@ export function listSessions(projectPath) {
           usage: { inputTokens, outputTokens, cacheRead, cacheCreate,
                    total: inputTokens + outputTokens + cacheRead + cacheCreate }
         }
-        if (cacheKey) cacheSet(cacheKey, entry)
+        if (listCacheKey) cacheSet(listCacheKey, entry)
         return entry
       })
       .sort((a, b) => {
@@ -136,8 +137,9 @@ export function getSession(projectPath, sessionId) {
   const filePath = join(dir, `${sessionId}.jsonl`)
   if (!existsSync(filePath)) return []
   const cacheKey = getCacheKey(filePath)
-  if (cacheKey && sessionCache.has(cacheKey)) {
-    return sessionCache.get(cacheKey)
+  const detailCacheKey = cacheKey ? `detail:${cacheKey}` : null
+  if (detailCacheKey && sessionCache.has(detailCacheKey)) {
+    return sessionCache.get(detailCacheKey)
   }
   const lines = parseLines(readFileSync(filePath, 'utf8'))
   const result = []
@@ -229,6 +231,6 @@ export function getSession(projectPath, sessionId) {
     }
   }
 
-  if (cacheKey) cacheSet(cacheKey, result)
+  if (detailCacheKey) cacheSet(detailCacheKey, result)
   return result
 }
