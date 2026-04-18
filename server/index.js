@@ -371,7 +371,8 @@ app.post('/api/launch-claude', (req, res) => {
   try {
     const p = process.platform
     if (p === 'win32') {
-      spawn('cmd.exe', ['/c', 'start', 'cmd.exe', '/k', `cd /d "${path}" && claude`], { detached: true, stdio: 'ignore' }).unref()
+      // 用 cwd 设置工作目录，避免路径拼接问题
+      spawn('cmd.exe', ['/k', 'claude'], { cwd: path, detached: true, stdio: 'ignore' }).unref()
     } else if (p === 'darwin') {
       spawn('osascript', [
         '-e', `tell application "Terminal"`,
@@ -380,12 +381,10 @@ app.post('/api/launch-claude', (req, res) => {
         '-e', `end tell`
       ], { detached: true, stdio: 'ignore' }).unref()
     } else {
-      // Linux：依次尝试常见终端
-      const cmd = `cd "${path}" && claude`
       spawn('bash', ['-c',
-        `gnome-terminal -- bash -c '${cmd}; exec bash' 2>/dev/null || ` +
-        `xterm -e 'bash -c "${cmd}; exec bash"' 2>/dev/null || ` +
-        `konsole -e bash -c '${cmd}' 2>/dev/null || true`
+        `gnome-terminal -- bash -c 'cd "${path}" && claude; exec bash' 2>/dev/null || ` +
+        `xterm -e bash -c 'cd "${path}" && claude; exec bash' 2>/dev/null || ` +
+        `konsole --workdir "${path}" -e claude 2>/dev/null || true`
       ], { detached: true, stdio: 'ignore' }).unref()
     }
     res.json({ ok: true })
@@ -401,13 +400,14 @@ app.post('/api/open-terminal', (req, res) => {
   try {
     const p = process.platform
     if (p === 'win32') {
-      spawn('cmd.exe', ['/c', 'start', 'cmd.exe', '/k', `cd /d "${path}"`], { detached: true, stdio: 'ignore' }).unref()
+      // 用 cwd 设置工作目录，避免路径拼接问题
+      spawn('cmd.exe', ['/k'], { cwd: path, detached: true, stdio: 'ignore' }).unref()
     } else if (p === 'darwin') {
       exec(`open -a Terminal "${path}"`)
     } else {
       spawn('bash', ['-c',
         `gnome-terminal -- bash -c 'cd "${path}"; exec bash' 2>/dev/null || ` +
-        `xterm -e 'bash -c "cd \\"${path}\\"; exec bash"' 2>/dev/null || ` +
+        `xterm -e bash -c 'cd "${path}"; exec bash' 2>/dev/null || ` +
         `konsole --workdir "${path}" 2>/dev/null || true`
       ], { detached: true, stdio: 'ignore' }).unref()
     }
