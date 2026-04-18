@@ -400,8 +400,8 @@ app.post('/api/open-terminal', (req, res) => {
   try {
     const p = process.platform
     if (p === 'win32') {
-      // 用 cwd 设置工作目录，避免路径拼接问题
-      spawn('cmd.exe', ['/k'], { cwd: path, detached: true, stdio: 'ignore' }).unref()
+      // start "" 开启新窗口，cwd 设置工作目录
+      spawn('cmd.exe', ['/c', 'start', 'cmd.exe'], { cwd: path, detached: true, stdio: 'ignore', shell: false }).unref()
     } else if (p === 'darwin') {
       exec(`open -a Terminal "${path}"`)
     } else {
