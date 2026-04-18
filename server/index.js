@@ -1,7 +1,7 @@
 import express from 'express'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { existsSync, readdirSync, readFileSync, copyFileSync, mkdirSync, statSync } from 'fs'
+import { existsSync, readdirSync, readFileSync, writeFileSync, copyFileSync, mkdirSync, statSync, rmSync } from 'fs'
 import os from 'os'
 import { loadConfig, saveConfig } from './config.js'
 import { buildProjectList, getProjectById } from './projects.js'
@@ -16,6 +16,7 @@ import { listCommands, saveCommand, deleteCommand } from './commands.js'
 import { execSync } from 'child_process'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+const HOME = process.env.HOME || os.homedir()
 const app = express()
 app.use(express.json())
 
@@ -845,6 +846,76 @@ app.post('/api/skills/install', (req, res) => {
     }
   } else {
     res.status(400).json({ error: 'Unknown source type' })
+  }
+})
+
+// --- Plugins ---
+const PLUGINS_JSON = join(HOME, '.claude', 'plugins', 'installed_plugins.json')
+const PLUGINS_CACHE_DIR = join(HOME, '.claude', 'plugins', 'cache')
+
+function loadPluginsJson() {
+  if (!existsSync(PLUGINS_JSON)) return { version: 2, plugins: {} }
+  try { return JSON.parse(readFileSync(PLUGINS_JSON, 'utf8')) } catch { return { version: 2, plugins: {} } }
+}
+
+function savePluginsJson(data) {
+  writeFileSync(PLUGINS_JSON, JSON.stringify(data, null, 2))
+}
+
+app.get('/api/plugins', (req, res) => {
+  const data = loadPluginsJson()
+  const list = Object.entries(data.plugins || {}).map(([key, installs]) => {
+    const [pluginName, marketplace] = key.split('@')
+    const install = installs[0] || {}
+    return {
+      key,
+      name: pluginName,
+      marketplace,
+      version: install.version || '',
+      installedAt: install.installedAt || '',
+      lastUpdated: install.lastUpdated || '',
+      installPath: install.installPath || '',
+      scope: install.scope || 'user',
+      gitCommitSha: install.gitCommitSha || '',
+    }
+  })
+  res.json(list)
+})
+
+app.delete('/api/plugins/:key', (req, res) => {
+  const key = decodeURIComponent(req.params.key)
+  const data = loadPluginsJson()
+  if (!data.plugins[key]) return res.status(404).json({ error: 'Plugin not found' })
+
+  const installs = data.plugins[key]
+  for (const inst of installs) {
+    if (inst.installPath && existsSync(inst.installPath)) {
+      try { rmSync(inst.installPath, { recursive: true, force: true }) } catch {}
+    }
+  }
+  delete data.plugins[key]
+  savePluginsJson(data)
+  res.json({ ok: true })
+})
+
+// --- Version check ---
+app.get('/api/version', async (req, res) => {
+  const pkgPath = join(__dirname, '..', 'package.json')
+  let localVersion = '0.0.0'
+  try { localVersion = JSON.parse(readFileSync(pkgPath, 'utf8')).version } catch {}
+
+  try {
+    const response = await fetch('https://api.github.com/repos/Evason-yang/Claude-code-dashboard/releases/latest', {
+      headers: { 'User-Agent': 'claude-code-dashboard' },
+      signal: AbortSignal.timeout(5000)
+    })
+    if (!response.ok) return res.json({ local: localVersion, latest: null, hasUpdate: false })
+    const data = await response.json()
+    const latest = (data.tag_name || '').replace(/^v/, '')
+    const hasUpdate = latest && latest !== localVersion
+    res.json({ local: localVersion, latest, hasUpdate })
+  } catch {
+    res.json({ local: localVersion, latest: null, hasUpdate: false })
   }
 })
 

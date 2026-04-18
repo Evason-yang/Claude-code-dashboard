@@ -27,6 +27,7 @@ const globalNav = [
   { label: 'Slash Commands', icon: '/', path: '/commands' },
   { label: 'MCP 管理', icon: '⟳', path: '/mcp' },
   { label: 'Hooks', icon: '⚡', path: '/hooks' },
+  { label: '插件管理', icon: '◈', path: '/plugins' },
 ]
 
 function ProjectItem({ p, onRemove, onDragStart, onDragOver, onDrop, onDragEnd, isDragOver }) {
@@ -96,6 +97,13 @@ export default function Sidebar({ projects, onProjectsReorder, onRefresh }) {
   const dragItem = useRef(null)
   const [theme, setTheme] = useState(getInitialTheme)
   const [projectFilter, setProjectFilter] = useState('')
+  const [updateInfo, setUpdateInfo] = useState(null)
+
+  useEffect(() => {
+    fetch('/api/version').then(r => r.json()).then(d => {
+      if (d.hasUpdate) setUpdateInfo(d)
+    }).catch(() => {})
+  }, [])
 
   function toggleTheme() {
     const next = theme === 'dark' ? 'light' : 'dark'
@@ -239,6 +247,15 @@ export default function Sidebar({ projects, onProjectsReorder, onRefresh }) {
         </div>
       </div>
 
+      {updateInfo && (
+        <div style={{ padding: '8px 12px', borderTop: '1px solid var(--border)', background: '#1a2a1a', fontSize: 12 }}>
+          <div style={{ color: '#3fb950', fontWeight: 600, marginBottom: 3 }}>有新版本 v{updateInfo.latest}</div>
+          <div style={{ color: 'var(--text2)', marginBottom: 6 }}>当前 v{updateInfo.local}</div>
+          <code style={{ display: 'block', fontSize: 10, color: 'var(--text2)', background: 'var(--bg3)', padding: '4px 6px', borderRadius: 4, wordBreak: 'break-all', lineHeight: 1.5 }}>
+            curl -fsSL https://raw.githubusercontent.com/Evason-yang/Claude-code-dashboard/main/install.sh | bash
+          </code>
+        </div>
+      )}
       <div style={{ ...S.footer, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <button style={S.addBtn} onClick={handleAddProject}>+ 添加项目</button>
         <button
