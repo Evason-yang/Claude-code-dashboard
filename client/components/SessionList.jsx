@@ -25,8 +25,9 @@ function SessionItem({ session, projectId }) {
             {fmt(session.usage.total)} tok
           </span>
         )}
-        <span style={{ fontSize: 11, color: 'var(--text2)', flexShrink: 0 }}>
-          {session.messageCount}条 · {relativeTime(session.updatedAt)}
+        <span style={{ fontSize: 11, color: 'var(--text2)', flexShrink: 0, textAlign: 'right', lineHeight: 1.5 }}>
+          <span style={{ display: 'block' }}>{fmtTime(session.createdAt)}{session.updatedAt && session.updatedAt !== session.createdAt ? ` — ${fmtTime(session.updatedAt)}` : ''}</span>
+          <span style={{ display: 'block' }}>{session.messageCount}条{dur ? ` · ${dur}` : ''}</span>
         </span>
         <span style={{ color: 'var(--text2)', fontSize: 10, flexShrink: 0 }}>{open ? '▲' : '▼'}</span>
       </div>
