@@ -56,9 +56,20 @@ function decodeProjectPath(encoded) {
     return null
   }
 
-  const resolved = resolve(0, '/')
-  // fallback：全部 - 换 /（保持兼容）
-  return resolved || ('/' + parts.join('/'))
+  // 尝试 Unix 根路径
+  const resolvedUnix = resolve(0, '/')
+  if (resolvedUnix) return resolvedUnix
+
+  // 尝试 Windows 驱动器（第一个 part 可能是驱动器号如 C）
+  if (process.platform === 'win32' && parts.length > 0 && /^[A-Za-z]$/.test(parts[0])) {
+    const drive = parts[0].toUpperCase() + ':\\'
+    const resolvedWin = resolve(1, drive)
+    if (resolvedWin) return resolvedWin
+    return drive + parts.slice(1).join('\\')
+  }
+
+  // fallback
+  return '/' + parts.join('/')
 }
 
 // 扫描 ~/.claude/projects/ 得到所有有会话记录的项目

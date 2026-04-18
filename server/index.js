@@ -13,10 +13,10 @@ import { searchSessions, searchAllSessions } from './search.js'
 import { readPrompt, writePrompt } from './prompts.js'
 import { readToolPerms, writeToolPerms } from './toolperms.js'
 import { listCommands, saveCommand, deleteCommand } from './commands.js'
-import { execSync } from 'child_process'
+import { execSync, exec, spawn } from 'child_process'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const HOME = process.env.HOME || os.homedir()
+const HOME = process.env.HOME || process.env.USERPROFILE || os.homedir()
 const app = express()
 app.use(express.json())
 
@@ -368,34 +368,53 @@ app.put('/api/config', (req, res) => {
 app.post('/api/launch-claude', (req, res) => {
   const { path } = req.body
   if (!path || !existsSync(path)) return res.status(400).json({ error: 'Invalid path' })
-  import('child_process').then(({ spawn }) => {
-    try {
-      // 用 open -a Terminal 打开新终端窗口并在项目目录执行 claude
+  try {
+    const p = process.platform
+    if (p === 'win32') {
+      spawn('cmd.exe', ['/c', 'start', 'cmd.exe', '/k', `cd /d "${path}" && claude`], { detached: true, stdio: 'ignore' }).unref()
+    } else if (p === 'darwin') {
       spawn('osascript', [
         '-e', `tell application "Terminal"`,
         '-e', `do script "cd \\"${path}\\" && claude"`,
         '-e', `activate`,
         '-e', `end tell`
       ], { detached: true, stdio: 'ignore' }).unref()
-      res.json({ ok: true })
-    } catch (e) {
-      res.status(500).json({ error: e.message })
+    } else {
+      // Linux：依次尝试常见终端
+      const cmd = `cd "${path}" && claude`
+      spawn('bash', ['-c',
+        `gnome-terminal -- bash -c '${cmd}; exec bash' 2>/dev/null || ` +
+        `xterm -e 'bash -c "${cmd}; exec bash"' 2>/dev/null || ` +
+        `konsole -e bash -c '${cmd}' 2>/dev/null || true`
+      ], { detached: true, stdio: 'ignore' }).unref()
     }
-  })
+    res.json({ ok: true })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
 })
 
 // --- Terminal ---
 app.post('/api/open-terminal', (req, res) => {
   const { path } = req.body
   if (!path || !existsSync(path)) return res.status(400).json({ error: 'Invalid path' })
-  import('child_process').then(({ execSync }) => {
-    try {
-      execSync(`open -a Terminal "${path}"`)
-      res.json({ ok: true })
-    } catch {
-      res.status(500).json({ error: 'Failed to open terminal' })
+  try {
+    const p = process.platform
+    if (p === 'win32') {
+      spawn('cmd.exe', ['/c', 'start', 'cmd.exe', '/k', `cd /d "${path}"`], { detached: true, stdio: 'ignore' }).unref()
+    } else if (p === 'darwin') {
+      exec(`open -a Terminal "${path}"`)
+    } else {
+      spawn('bash', ['-c',
+        `gnome-terminal -- bash -c 'cd "${path}"; exec bash' 2>/dev/null || ` +
+        `xterm -e 'bash -c "cd \\"${path}\\"; exec bash"' 2>/dev/null || ` +
+        `konsole --workdir "${path}" 2>/dev/null || true`
+      ], { detached: true, stdio: 'ignore' }).unref()
     }
-  })
+    res.json({ ok: true })
+  } catch {
+    res.status(500).json({ error: 'Failed to open terminal' })
+  }
 })
 
 // --- Usage ---
@@ -836,9 +855,9 @@ app.post('/api/skills/install', (req, res) => {
     const dest = join(LOCAL_SKILLS_DIR, repoName)
     try {
       if (!existsSync(dest)) {
-        execSync(`git clone ${url} ${dest}`, { timeout: 30000 })
+        execSync(`git clone "${url}" "${dest}"`, { timeout: 30000 })
       } else {
-        execSync(`git -C ${dest} pull`, { timeout: 30000 })
+        execSync(`git -C "${dest}" pull`, { timeout: 30000 })
       }
       res.json({ ok: true, name: repoName })
     } catch (e) {

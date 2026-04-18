@@ -3,7 +3,7 @@ import { join } from 'path'
 import os from 'os'
 
 function getConfigPath() {
-  const home = process.env.HOME || os.homedir()
+  const home = process.env.HOME || process.env.USERPROFILE || os.homedir()
   const dir = join(home, '.mtclaudecode')
   return { dir, path: join(dir, 'config.json') }
 }
