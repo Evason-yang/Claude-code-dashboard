@@ -7,29 +7,38 @@
 ## 功能特性
 
 - **项目总览** — 所有 Claude Code 项目的最近活动、Token 用量和模型分布图表
-- **会话历史** — 浏览并搜索完整对话记录，支持展示子 Agent 调用详情
+- **会话历史** — 浏览并搜索完整对话记录，折叠状态显示开始/结束时间，支持展示子 Agent 调用详情
+- **全局搜索** — 跨项目搜索所有会话内容
 - **Token 用量统计** — 按模型和项目分类的图表，支持分钟/小时/天粒度和时间范围筛选
-- **记忆管理** — 查看和编辑 Claude Code 记忆文件（全局 CLAUDE.md 及项目级记忆）
+- **记忆管理** — 查看和编辑 Claude Code 记忆文件（全局记忆自动同步到 `~/.claude/CLAUDE.md`）
 - **模型管理** — 切换全局默认模型
 - **Skill 管理** — 浏览来自插件和 `~/.claude/skills/` 的已安装 Skill
+- **插件管理** — 查看通过 `/plugins` 安装的插件，支持卸载
 - **MCP 服务器管理** — 添加、编辑和删除 MCP 服务器（全局和项目级）
 - **Hooks 管理** — 配置 Claude Code 生命周期钩子（SessionStart、PreToolUse 等）
 - **工具权限** — 管理每个项目的 allow/deny 规则
 - **Slash Commands** — 创建和管理自定义斜杠命令
+- **版本更新提示** — 有新版本时侧边栏自动提示
 - **深色 / 浅色模式** — 跟随系统或手动切换
 
 ## 环境要求
 
-- **macOS**（依赖 `~/.claude/` 目录结构）
+- **macOS / Windows / Linux**
 - **Node.js 18+**
 - **Claude Code** 已安装并至少使用过一次（需要有会话数据）
 
 ## 安装
 
-**一键安装（推荐）：**
+**macOS / Linux 一键安装（推荐）：**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Evason-yang/Claude-code-dashboard/main/install.sh | bash
+```
+
+**Windows 一键安装（PowerShell）：**
+
+```powershell
+irm https://raw.githubusercontent.com/Evason-yang/Claude-code-dashboard/main/install.ps1 | iex
 ```
 
 脚本会自动检查依赖、克隆仓库、安装依赖、构建前端，并询问是否立即启动。再次运行同一命令可更新到最新版本。
@@ -43,15 +52,16 @@ npm install
 npm start
 ```
 
-应用会自动构建前端并打开 `http://localhost:3000`。
-
 ## 开发模式
 
 ```bash
 npm run dev     # 同时启动后端（端口 3000）和前端（Vite，端口 5173），支持热更新
+                # 开发时请访问 http://localhost:5173
 npm test        # 运行后端单元测试
-npm run build   # 仅构建前端
+npm run build   # 仅构建前端（更新 3000 端口的页面）
 ```
+
+> **注意**：`npm run dev` 会启动两个服务。开发时访问 **5173 端口**（热更新）；运行 `npm run build` 后 3000 端口才会更新为最新页面。
 
 ## 首次启动
 
