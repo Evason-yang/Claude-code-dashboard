@@ -868,6 +868,60 @@ app.post('/api/skills/install', (req, res) => {
   }
 })
 
+// --- File Browser ---
+app.get('/api/projects/:id/files', (req, res) => {
+  const cfg = loadConfig()
+  const proj = getProjectById(buildProjectList(cfg), req.params.id)
+  if (!proj) return res.status(404).json({ error: 'Not found' })
+
+  const reqPath = req.query.path || ''
+  const base = proj.path
+  const target = reqPath ? join(base, reqPath) : base
+
+  // 安全检查：不允许跳出项目目录
+  if (!target.startsWith(base)) return res.status(403).json({ error: 'Forbidden' })
+  if (!existsSync(target)) return res.status(404).json({ error: 'Path not found' })
+
+  try {
+    const entries = readdirSync(target, { withFileTypes: true })
+    const items = entries.map(e => ({
+      name: e.name,
+      type: e.isDirectory() ? 'dir' : 'file',
+      path: reqPath ? `${reqPath}/${e.name}` : e.name,
+    })).sort((a, b) => {
+      if (a.type !== b.type) return a.type === 'dir' ? -1 : 1
+      return a.name.localeCompare(b.name)
+    })
+    res.json(items)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.get('/api/projects/:id/file', (req, res) => {
+  const cfg = loadConfig()
+  const proj = getProjectById(buildProjectList(cfg), req.params.id)
+  if (!proj) return res.status(404).json({ error: 'Not found' })
+
+  const filePath = req.query.path
+  if (!filePath) return res.status(400).json({ error: 'Missing path' })
+
+  const base = proj.path
+  const target = join(base, filePath)
+
+  if (!target.startsWith(base)) return res.status(403).json({ error: 'Forbidden' })
+  if (!existsSync(target)) return res.status(404).json({ error: 'Not found' })
+
+  try {
+    const stat = statSync(target)
+    if (stat.size > 2 * 1024 * 1024) return res.status(400).json({ error: 'File too large (>2MB)' })
+    const content = readFileSync(target, 'utf8')
+    res.json({ content, size: stat.size })
+  } catch {
+    res.status(400).json({ error: 'Cannot read file (binary or encoding error)' })
+  }
+})
+
 // --- Plugins ---
 const PLUGINS_JSON = join(HOME, '.claude', 'plugins', 'installed_plugins.json')
 const PLUGINS_CACHE_DIR = join(HOME, '.claude', 'plugins', 'cache')

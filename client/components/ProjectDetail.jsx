@@ -1,5 +1,5 @@
 import React from 'react'
-import { useParams, NavLink, Routes, Route } from 'react-router-dom'
+import { useParams, NavLink, Routes, Route, useLocation } from 'react-router-dom'
 import OverviewTab from './OverviewTab.jsx'
 import SessionList from './SessionList.jsx'
 import GitLog from './GitLog.jsx'
@@ -9,6 +9,7 @@ import ClaudeMdTab from './ClaudeMdTab.jsx'
 import ToolPermsTab from './ToolPermsTab.jsx'
 import ProjectCommandsTab from './ProjectCommandsTab.jsx'
 import SessionSearchTab from './SessionSearchTab.jsx'
+import FileBrowserTab from './FileBrowserTab.jsx'
 
 const S = {
   container: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' },
@@ -22,6 +23,7 @@ const S = {
 
 export default function ProjectDetail({ projects }) {
   const { id } = useParams()
+  const { pathname } = useLocation()
   const project = projects.find(p => p.id === id)
   const [refreshKey, setRefreshKey] = React.useState(0)
 
@@ -41,7 +43,11 @@ export default function ProjectDetail({ projects }) {
     { label: 'CLAUDE.md', path: 'claudemd' },
     { label: '工具权限', path: 'toolperms' },
     { label: 'Commands', path: 'commands' },
+    { label: '文件', path: 'files' },
   ]
+
+  // 文件浏览器 tab 需要撑满高度，不用 padding 容器
+  const isFilesTab = pathname.endsWith('/files')
 
   return (
     <div style={S.container}>
@@ -65,7 +71,7 @@ export default function ProjectDetail({ projects }) {
           </NavLink>
         ))}
       </div>
-      <div style={S.content}>
+      <div style={isFilesTab ? { flex: 1, overflow: 'hidden' } : S.content}>
         <Routes>
           <Route index element={<OverviewTab project={project} refreshKey={refreshKey} />} />
           <Route path="sessions" element={<SessionList project={project} refreshKey={refreshKey} />} />
@@ -76,6 +82,7 @@ export default function ProjectDetail({ projects }) {
           <Route path="claudemd" element={<ClaudeMdTab project={project} refreshKey={refreshKey} />} />
           <Route path="toolperms" element={<ToolPermsTab project={project} refreshKey={refreshKey} />} />
           <Route path="commands" element={<ProjectCommandsTab project={project} refreshKey={refreshKey} />} />
+          <Route path="files" element={<FileBrowserTab project={project} />} />
         </Routes>
       </div>
     </div>
