@@ -898,6 +898,18 @@ app.get('/api/projects/:id/files', (req, res) => {
   }
 })
 
+app.get('/api/projects/:id/file-raw', (req, res) => {
+  const cfg = loadConfig()
+  const proj = getProjectById(buildProjectList(cfg), req.params.id)
+  if (!proj) return res.status(404).end()
+  const filePath = req.query.path
+  if (!filePath) return res.status(400).end()
+  const base = proj.path
+  const target = join(base, filePath)
+  if (!target.startsWith(base) || !existsSync(target)) return res.status(404).end()
+  res.sendFile(target)
+})
+
 app.get('/api/projects/:id/file', (req, res) => {
   const cfg = loadConfig()
   const proj = getProjectById(buildProjectList(cfg), req.params.id)
