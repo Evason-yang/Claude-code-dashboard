@@ -45,6 +45,19 @@ function SessionItem({ session, projectId }) {
               <span>合计 <b style={{ color: 'var(--accent)', fontFamily: 'monospace' }}>{fmt(session.usage.total)}</b></span>
             </>}
             {realModels.length > 0 && <span>模型 <b style={{ color: 'var(--text)' }}>{realModels.join(', ')}</b></span>}
+            {/* Session ID + 恢复命令 */}
+            <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <code style={{ fontSize: 10, color: 'var(--text2)', fontFamily: 'monospace', background: 'var(--bg2)', padding: '1px 5px', borderRadius: 3, userSelect: 'all' }}>
+                {session.id}
+              </code>
+              <button
+                onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(`claude --resume ${session.id}`) }}
+                title="复制恢复命令"
+                style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 3, cursor: 'pointer', fontSize: 10, color: 'var(--text2)', padding: '1px 6px', lineHeight: 1.6 }}
+              >
+                复制 --resume
+              </button>
+            </span>
           </div>
           {/* 消息线程：自动滚到最后一条 */}
           <MessageThread projectId={projectId} sessionId={session.id} maxHeight={600} />
