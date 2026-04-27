@@ -28,6 +28,7 @@ const globalNav = [
   { label: 'MCP 管理', icon: '⟳', path: '/mcp' },
   { label: 'Hooks', icon: '⚡', path: '/hooks' },
   { label: '插件管理', icon: '◈', path: '/plugins' },
+  { label: '全局配置', icon: '⚙', path: '/global-settings' },
 ]
 
 function ProjectItem({ p, onRemove, onDragStart, onDragOver, onDrop, onDragEnd, isDragOver }) {

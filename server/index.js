@@ -625,6 +625,31 @@ app.get('/api/usage', (req, res) => {
 // --- Hooks ---
 const HOOK_EVENTS = ['SessionStart', 'PreToolUse', 'PostToolUse', 'Stop', 'Notification']
 
+// --- Global Settings ---
+app.get('/api/settings', (req, res) => {
+  res.json(loadSettings())
+})
+
+app.put('/api/settings', (req, res) => {
+  const updates = req.body
+  if (!updates || typeof updates !== 'object') return res.status(400).json({ error: 'Invalid body' })
+  const settings = loadSettings()
+  // 只允许更新安全的顶级字段，不允许覆盖 enabledPlugins / extraKnownMarketplaces
+  const ALLOWED = ['permissions', 'model', 'statusLine', 'skipAutoPermissionPrompt', 'theme', 'verbosityLevel', 'cleanupPeriodDays']
+  for (const key of ALLOWED) {
+    if (key in updates) {
+      if (updates[key] === null || updates[key] === undefined) delete settings[key]
+      else settings[key] = updates[key]
+    }
+  }
+  try {
+    writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2))
+    res.json({ ok: true })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 app.get('/api/hooks', (req, res) => {
   const settings = loadSettings()
   const hooks = settings.hooks || {}

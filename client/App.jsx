@@ -16,6 +16,7 @@ import McpPage from './components/McpPage.jsx'
 import HooksPage from './components/HooksPage.jsx'
 import GlobalSearchPage from './components/GlobalSearchPage.jsx'
 import PluginsPage from './components/PluginsPage.jsx'
+import GlobalSettingsPage from './components/GlobalSettingsPage.jsx'
 
 export default function App() {
   const [projects, setProjects] = useState([])
@@ -69,6 +70,7 @@ export default function App() {
         <Route path="/hooks" element={<HooksPage />} />
         <Route path="/search" element={<GlobalSearchPage />} />
         <Route path="/plugins" element={<PluginsPage />} />
+        <Route path="/global-settings" element={<GlobalSettingsPage />} />
         <Route path="/projects/:id/*" element={<ProjectDetail projects={projects} />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
