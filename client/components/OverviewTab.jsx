@@ -39,6 +39,14 @@ function PieChart({ data, size = 72 }) {
 function RecentSessionCard({ projectId, session }) {
   const realModels = (session.models || []).filter(m => m !== '<synthetic>')
   const dur = duration(session.createdAt, session.updatedAt)
+  const [copied, setCopied] = React.useState(false)
+
+  function copyResume(e) {
+    e.stopPropagation()
+    navigator.clipboard.writeText(`claude --resume ${session.id}`)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
 
   return (
     <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
@@ -51,6 +59,18 @@ function RecentSessionCard({ projectId, session }) {
           <div style={{ display: 'flex', gap: 4 }}>
             {realModels.map(m => <ModelBadge key={m} model={m} />)}
           </div>
+          <button
+            onClick={copyResume}
+            title={`复制：claude --resume ${session.id}`}
+            style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 3, cursor: 'pointer', padding: '1px 6px', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}
+          >
+            <code style={{ fontSize: 10, color: copied ? 'var(--accent)' : 'var(--text2)', fontFamily: 'monospace' }}>
+              {session.id.slice(0, 8)}…
+            </code>
+            <span style={{ fontSize: 10, color: copied ? 'var(--accent)' : 'var(--text2)' }}>
+              {copied ? '✓' : '⎘'}
+            </span>
+          </button>
         </div>
         {/* 时间 + token 明细 */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 11, color: 'var(--text2)' }}>
