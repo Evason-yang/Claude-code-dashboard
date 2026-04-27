@@ -39,19 +39,48 @@ function getLastActive(projectPath) {
 // 编码规则：/ → -（包括开头的 /）
 // 还原：用动态规划贪心匹配文件系统，逐段验证路径存在
 function decodeProjectPath(encoded) {
-  // encoded 形如 -Users-username-Projects-my-project
-  // 把开头的 - 换成 /，然后尝试所有可能的 - 分割方式，找到真实存在的路径
-  const parts = encoded.replace(/^-/, '').split('-')
+  // encoded 形如 -Users-username--tmux（所有非字母数字字符都被替换为 -）
+  // 还原：贪心匹配文件系统，逐段验证路径存在（处理含 - 或 . 的目录名）
+  // 去掉开头的 -（代表根 /），剩余按 - 分割
+  const tokens = encoded.replace(/^-+/, '').split('-')
 
   function resolve(idx, current) {
-    if (idx === parts.length) return existsSync(current) ? current : null
-    // 尝试从当前位置开始，把连续多个 parts 合并为一个路径段（处理含 - 的目录名）
+    if (idx === tokens.length) return existsSync(current) ? current : null
+    // 尝试把从 idx 开始的连续若干 token 合并为一个路径段
+    // 路径段中的分隔符可能是 - 或 . 等，需要枚举所有可能的合并方式
+    function trySegment(tokenIdx, prefix) {
+      if (tokenIdx >= tokens.length) return null
+      // 当前 token 追加到 prefix（用 - 连接，因为原始字符可能是 - 或其他）
+      const withDash = prefix ? prefix + '-' + tokens[tokenIdx] : tokens[tokenIdx]
+      // 也尝试用 . 连接（处理 .tmux → -tmux 这种以 . 开头的目录）
+      const withDot = prefix ? prefix + '.' + tokens[tokenIdx] : '.' + tokens[tokenIdx]
+
+      const candidates = prefix === ''
+        ? [tokens[tokenIdx], '.' + tokens[tokenIdx]]  // 首个 token：尝试普通和点开头
+        : [withDash, withDot]
+
+      for (const seg of candidates) {
+        const candidate = join(current, seg)
+        const result = resolve(tokenIdx + 1, candidate)
+        if (result) return result
+      }
+      return null
+    }
+
+    // 简化：直接枚举从 idx 开始的连续 token 合并
     let segment = ''
-    for (let end = idx; end < parts.length; end++) {
-      segment = segment ? segment + '-' + parts[end] : parts[end]
-      const candidate = join(current, segment)
-      const result = resolve(end + 1, candidate)
-      if (result) return result
+    for (let end = idx; end < tokens.length; end++) {
+      // 尝试普通合并（- 连接）
+      segment = segment ? segment + '-' + tokens[end] : tokens[end]
+      const r1 = resolve(end + 1, join(current, segment))
+      if (r1) return r1
+
+      // 尝试以 . 开头的目录名（如 .tmux、.config）
+      if (end === idx) {
+        const dotSeg = '.' + tokens[end]
+        const r2 = resolve(end + 1, join(current, dotSeg))
+        if (r2) return r2
+      }
     }
     return null
   }
@@ -60,16 +89,16 @@ function decodeProjectPath(encoded) {
   const resolvedUnix = resolve(0, '/')
   if (resolvedUnix) return resolvedUnix
 
-  // 尝试 Windows 驱动器（第一个 part 可能是驱动器号如 C）
-  if (process.platform === 'win32' && parts.length > 0 && /^[A-Za-z]$/.test(parts[0])) {
-    const drive = parts[0].toUpperCase() + ':\\'
+  // 尝试 Windows 驱动器
+  if (process.platform === 'win32' && tokens.length > 0 && /^[A-Za-z]$/.test(tokens[0])) {
+    const drive = tokens[0].toUpperCase() + ':\\'
     const resolvedWin = resolve(1, drive)
     if (resolvedWin) return resolvedWin
-    return drive + parts.slice(1).join('\\')
+    return drive + tokens.slice(1).join('\\')
   }
 
   // fallback
-  return '/' + parts.join('/')
+  return '/' + tokens.join('/')
 }
 
 // 扫描 ~/.claude/projects/ 得到所有有会话记录的项目

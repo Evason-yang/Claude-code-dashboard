@@ -23,13 +23,13 @@ function getCacheKey(filePath) {
 }
 
 // Claude Code 把会话存在 ~/.claude/projects/<encoded-path>/
-// 编码规则：统一转为 /，再全部替换为 -
+// 编码规则：所有非字母数字字符（含 / . _ 等）全部替换为 -
 export function encodePath(projectPath) {
-  // Windows 路径：C:\Users\foo → C:/Users/foo → C-/Users/foo... 需特殊处理驱动器号
+  // Windows 路径先统一转为 /，并去掉驱动器冒号
   let p = projectPath.replace(/\\/g, '/')
-  // Windows 驱动器号 C:/ → C/（去掉冒号）
   p = p.replace(/^([A-Za-z]):\//, '$1/')
-  return p.replace(/\//g, '-')
+  // 与 Claude Code 保持一致：所有非字母数字字符替换为 -
+  return p.replace(/[^a-zA-Z0-9]/g, '-')
 }
 
 export function getClaudeProjectDir(projectPath) {
