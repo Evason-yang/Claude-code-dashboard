@@ -3,9 +3,16 @@ import { ModelBadge, MessageThread, relativeTime, fmtTime, fmt, duration } from 
 
 function SessionItem({ session, projectId }) {
   const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
   const realModels = (session.models || []).filter(m => m !== '<synthetic>')
   const dur = duration(session.createdAt, session.updatedAt)
-  const agentCount = 0  // 在列表阶段不知道，展开后由 MessageThread 内部展示
+
+  function copyResume(e) {
+    e.stopPropagation()
+    navigator.clipboard.writeText(`claude --resume ${session.id}`)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
 
   return (
     <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 6, marginBottom: 8, overflow: 'hidden' }}>
@@ -25,6 +32,19 @@ function SessionItem({ session, projectId }) {
             {fmt(session.usage.total)} tok
           </span>
         )}
+        {/* Session ID — 点击复制 --resume 命令 */}
+        <button
+          onClick={copyResume}
+          title={`复制：claude --resume ${session.id}`}
+          style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 3, cursor: 'pointer', padding: '1px 6px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}
+        >
+          <code style={{ fontSize: 10, color: copied ? 'var(--accent)' : 'var(--text2)', fontFamily: 'monospace' }}>
+            {session.id.slice(0, 8)}…
+          </code>
+          <span style={{ fontSize: 10, color: copied ? 'var(--accent)' : 'var(--text2)' }}>
+            {copied ? '✓' : '⎘'}
+          </span>
+        </button>
         <span style={{ fontSize: 11, color: 'var(--text2)', flexShrink: 0, textAlign: 'right', lineHeight: 1.5 }}>
           <span style={{ display: 'block' }}>{fmtTime(session.createdAt)}{session.updatedAt && session.updatedAt !== session.createdAt ? ` — ${fmtTime(session.updatedAt)}` : ''}</span>
           <span style={{ display: 'block' }}>{session.messageCount}条{dur ? ` · ${dur}` : ''}</span>
@@ -45,19 +65,6 @@ function SessionItem({ session, projectId }) {
               <span>合计 <b style={{ color: 'var(--accent)', fontFamily: 'monospace' }}>{fmt(session.usage.total)}</b></span>
             </>}
             {realModels.length > 0 && <span>模型 <b style={{ color: 'var(--text)' }}>{realModels.join(', ')}</b></span>}
-            {/* Session ID + 恢复命令 */}
-            <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <code style={{ fontSize: 10, color: 'var(--text2)', fontFamily: 'monospace', background: 'var(--bg2)', padding: '1px 5px', borderRadius: 3, userSelect: 'all' }}>
-                {session.id}
-              </code>
-              <button
-                onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(`claude --resume ${session.id}`) }}
-                title="复制恢复命令"
-                style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 3, cursor: 'pointer', fontSize: 10, color: 'var(--text2)', padding: '1px 6px', lineHeight: 1.6 }}
-              >
-                复制 --resume
-              </button>
-            </span>
           </div>
           {/* 消息线程：自动滚到最后一条 */}
           <MessageThread projectId={projectId} sessionId={session.id} maxHeight={600} />
