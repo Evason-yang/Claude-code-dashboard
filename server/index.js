@@ -738,11 +738,17 @@ function readOneSkill(entryPath, name, pluginId) {
   // 必须有 SKILL.md 或是 .md 文件才算 skill
   const isSkill = name.endsWith('.md') || existsSync(join(entryPath, 'SKILL.md'))
   if (!isSkill) return null
+  // 确定 skill 文件路径
+  let filePath = name.endsWith('.md') ? entryPath : join(entryPath, 'SKILL.md')
+  const isLocal = pluginId.startsWith('local:')
+
   return {
     id: `${pluginId}:${skillName}`,
     name: skillName,
-    description: (fm.description || '').replace(/\n.*/s, '').trim(),  // 只取第一行
-    plugin: pluginId
+    description: (fm.description || '').replace(/\n.*/s, '').trim(),
+    plugin: pluginId,
+    filePath,
+    editable: isLocal,
   }
 }
 
@@ -757,6 +763,15 @@ function readSkillsFromDir(dir, pluginId) {
     }
   } catch {}
   return skills
+}
+
+// 判断路径是否在允许目录下（安全检查）
+function isAllowedSkillPath(filePath) {
+  const allowed = [
+    join(os.homedir(), '.claude', 'skills'),
+    join(os.homedir(), '.claude', 'plugins', 'cache'),
+  ]
+  return allowed.some(dir => filePath.startsWith(dir))
 }
 
 function getAllPlugins(enabledMap) {
@@ -798,13 +813,13 @@ function getAllPlugins(enabledMap) {
           // 是 .md 文件，本身就是一个 skill
           const fm = parseSkillFrontmatter(entryPath)
           description = (fm.description || '').replace(/\n.*/s, '').trim()
-          skills = [{ id: `local:${entry.replace(/\.md$/, '')}`, name: entry.replace(/\.md$/, ''), description, plugin: pluginId }]
+          skills = [{ id: `local:${entry.replace(/\.md$/, '')}`, name: entry.replace(/\.md$/, ''), description, plugin: pluginId, filePath: entryPath, editable: true }]
         } catch {
           if (existsSync(selfSkillMd)) {
             // 目录本身是一个 skill（如 gstack/SKILL.md）
             const fm = parseSkillFrontmatter(selfSkillMd)
             description = (fm.description || '').replace(/\n.*/s, '').trim()
-            skills = [{ id: `local:${entry}`, name: entry, description, plugin: pluginId }]
+            skills = [{ id: `local:${entry}`, name: entry, description, plugin: pluginId, filePath: selfSkillMd, editable: true }]
           } else {
             // 目录是 skill 集合（每个子目录/文件是一个 skill）
             skills = readSkillsFromDir(entryPath, pluginId)
@@ -839,6 +854,35 @@ app.get('/api/skills/all', (req, res) => {
     if (plugin.enabled !== false) all.push(...plugin.skills)
   }
   res.json(all)
+})
+
+app.get('/api/skills/file', (req, res) => {
+  const { path: filePath } = req.query
+  if (!filePath) return res.status(400).json({ error: 'Missing path' })
+  if (!isAllowedSkillPath(filePath)) return res.status(403).json({ error: 'Forbidden' })
+  if (!existsSync(filePath)) return res.status(404).json({ error: 'Not found' })
+  try {
+    const content = readFileSync(filePath, 'utf8')
+    res.json({ content })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.put('/api/skills/file', (req, res) => {
+  const { path: filePath, content } = req.body
+  if (!filePath || content === undefined) return res.status(400).json({ error: 'Missing path or content' })
+  if (!isAllowedSkillPath(filePath)) return res.status(403).json({ error: 'Forbidden' })
+  // 只允许编辑本地 skills 目录（插件缓存只读）
+  if (!filePath.startsWith(join(os.homedir(), '.claude', 'skills'))) {
+    return res.status(403).json({ error: '插件 skill 文件不可编辑' })
+  }
+  try {
+    writeFileSync(filePath, content, 'utf8')
+    res.json({ ok: true })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
 })
 
 app.put('/api/skills/:id/toggle', (req, res) => {
