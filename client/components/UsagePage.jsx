@@ -1,5 +1,15 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useToast } from './Toast.jsx'
+import TimeAdjustInput from './TimeAdjustInput.jsx'
+
+const DATETIME_STEPS = [
+  { label: '−1d', minutes: -1440 },
+  { label: '−1h', minutes: -60 },
+  { label: '−30m', minutes: -30 },
+  { label: '+30m', minutes: 30 },
+  { label: '+1h', minutes: 60 },
+  { label: '+1d', minutes: 1440 },
+]
 
 const MODEL_COLORS = {
   'claude-opus-4-6': '#58a6ff',
@@ -301,12 +311,12 @@ export default function UsagePage({ projectId, embedded }) {
             }}>{p.label}</button>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12 }}>
-          <input type="datetime-local" value={since} onChange={e => { setSince(e.target.value); setPreset(null) }}
-            style={{ padding: '3px 6px', fontSize: 11, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--text)' }} />
-          <span style={{ color: 'var(--text2)' }}>—</span>
-          <input type="datetime-local" value={until} onChange={e => { setUntil(e.target.value); setPreset(null) }}
-            style={{ padding: '3px 6px', fontSize: 11, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--text)' }} />
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          <TimeAdjustInput type="datetime-local" value={since} steps={DATETIME_STEPS}
+            onChange={v => { setSince(v); setPreset(null) }} />
+          <span style={{ color: 'var(--text2)', fontSize: 12 }}>—</span>
+          <TimeAdjustInput type="datetime-local" value={until} steps={DATETIME_STEPS}
+            onChange={v => { setUntil(v); setPreset(null) }} />
         </div>
       </div>
 

@@ -1,5 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { ModelBadge, MessageThread, relativeTime, fmtTime, fmt, duration } from './MessageThread.jsx'
+import TimeAdjustInput from './TimeAdjustInput.jsx'
+
+const DATE_STEPS = [
+  { label: '−7d', minutes: -10080 },
+  { label: '−1d', minutes: -1440 },
+  { label: '+1d', minutes: 1440 },
+  { label: '+7d', minutes: 10080 },
+]
 
 function SessionItem({ session, projectId }) {
   const [open, setOpen] = useState(false)
@@ -131,12 +139,12 @@ export default function SessionList({ project, refreshKey }) {
             }}>{p.label}</button>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 11 }}>
-          <input type="date" value={since} onChange={e => { setSince(e.target.value); setPreset(null) }}
-            style={{ padding: '2px 6px', fontSize: 11, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--text)' }} />
-          <span style={{ color: 'var(--text2)' }}>—</span>
-          <input type="date" value={until} onChange={e => { setUntil(e.target.value); setPreset(null) }}
-            style={{ padding: '2px 6px', fontSize: 11, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--text)' }} />
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          <TimeAdjustInput type="date" value={since} steps={DATE_STEPS}
+            onChange={v => { setSince(v); setPreset(null) }} />
+          <span style={{ color: 'var(--text2)', fontSize: 11 }}>—</span>
+          <TimeAdjustInput type="date" value={until} steps={DATE_STEPS}
+            onChange={v => { setUntil(v); setPreset(null) }} />
         </div>
       </div>
 
