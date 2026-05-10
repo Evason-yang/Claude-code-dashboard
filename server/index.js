@@ -32,16 +32,20 @@ app.post('/api/projects', (req, res) => {
   const { path, mode } = req.body  // mode: 'project' | 'scandir' | undefined=auto
   if (!path || !existsSync(path)) return res.status(400).json({ error: 'Invalid path' })
   const cfg = loadConfig()
-  // 自动判断：该路径本身有 Claude 会话则为项目，否则为扫描目录
-  const encoded = path.replace(/\//g, '-')
-  const claudeDir = join(os.homedir(), '.claude', 'projects', encoded)
+  // mode 明确指定时直接使用；否则自动判断（该路径有 Claude 会话则为项目）
+  const encodeForClaude = p => p.replace(/[^a-zA-Z0-9]/g, '-')
+  const claudeDir = join(os.homedir(), '.claude', 'projects', encodeForClaude(path))
   const isSingleProject = mode === 'project' || (mode !== 'scandir' && existsSync(claudeDir))
+  // 无论哪种方式添加，先从隐藏列表移除（兼容删除后重新添加的场景）
+  cfg.hiddenProjects = (cfg.hiddenProjects || []).filter(p => p !== path)
   if (isSingleProject) {
-    if (!cfg.manualProjects.includes(path)) { cfg.manualProjects.push(path); saveConfig(cfg) }
-    registerPathMapping(path)  // 写入 pathMap，与 Claude Code 解耦
+    if (!cfg.manualProjects.includes(path)) cfg.manualProjects.push(path)
+    registerPathMapping(path)
+    saveConfig(cfg)
     res.json({ ok: true, type: 'project' })
   } else {
-    if (!cfg.scanDirs.includes(path)) { cfg.scanDirs.push(path); saveConfig(cfg) }
+    if (!cfg.scanDirs.includes(path)) cfg.scanDirs.push(path)
+    saveConfig(cfg)
     res.json({ ok: true, type: 'scandir' })
   }
 })
@@ -320,10 +324,15 @@ app.delete('/api/projects/:id/memories/:file', (req, res) => {
 app.get('/api/memories', (req, res) => {
   const cfg = loadConfig()
   const projects = buildProjectList(cfg)
+  const globalMemDir = join(os.homedir(), '.claude', 'memory')
   const result = [
-    { id: '__global__', name: '全局记忆', memories: listGlobalMemories() },
+    { id: '__global__', name: '全局记忆', path: globalMemDir, memories: listGlobalMemories() },
     ...projects
-      .map(p => ({ id: p.id, name: p.name, memories: listMemories(p.path) }))
+      .map(p => {
+        const memDir = join(os.homedir(), '.claude', 'projects',
+          p.path.replace(/[^a-zA-Z0-9]/g, '-'), 'memory')
+        return { id: p.id, name: p.name, path: memDir, memories: listMemories(p.path) }
+      })
       .filter(p => p.memories.length > 0)
   ]
   res.json(result)

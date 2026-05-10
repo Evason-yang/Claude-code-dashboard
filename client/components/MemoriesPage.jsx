@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import MemoryEditor from './MemoryEditor.jsx'
 import { useToast } from './Toast.jsx'
+import PathBadge from './PathBadge.jsx'
 
 const TYPE_COLORS = {
   user: '#58a6ff', feedback: '#f0883e', project: '#3fb950',
@@ -67,9 +68,7 @@ export default function MemoriesPage() {
               <div key={g.id} style={{ marginBottom: 24 }}>
                 <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 8 }}>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>{g.name}</div>
-                  {g.id === '__global__' && (
-                    <span style={{ fontSize: 10, color: 'var(--text2)', background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 3, padding: '1px 5px' }}>~/.claude/memory/</span>
-                  )}
+                  {g.path && <PathBadge path={g.path} />}
                   <div style={{ fontSize: 11, color: 'var(--text2)' }}>{g.memories.length} 条</div>
                   <button
                     onClick={() => setEditor({ projectId: g.id, memory: null })}

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useToast } from './Toast.jsx'
+import PathBadge from './PathBadge.jsx'
 
 const HOOK_EVENTS = ['SessionStart', 'PreToolUse', 'PostToolUse', 'Stop', 'Notification']
 
@@ -103,8 +104,11 @@ export default function HooksPage() {
         <div style={{ fontSize: 18, fontWeight: 700 }}>Hooks 管理</div>
         <button onClick={load} title="刷新" style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text2)', fontSize: 18, padding: '4px 8px', borderRadius: 4, opacity: 0.75 }}>↻</button>
       </div>
-      <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 20 }}>
-        配置 Claude Code 生命周期钩子，写入 <code style={{ fontSize: 12 }}>~/.claude/settings.json</code>
+      <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 8 }}>
+        配置 Claude Code 生命周期钩子
+      </div>
+      <div style={{ marginBottom: 20 }}>
+        <PathBadge path="~/.claude/settings.json" />
       </div>
 
       {loading ? <div style={{ color: 'var(--text2)', fontSize: 13 }}>加载中...</div> : (

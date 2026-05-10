@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import PathBadge from './PathBadge.jsx'
 
 const BUILTIN_TOOLS = [
   { name: 'Bash',         category: '执行',  desc: '执行 shell 命令',          risk: 'high' },
@@ -63,8 +64,11 @@ export default function GlobalToolsPage() {
         <div style={{ fontSize: 18, fontWeight: 700 }}>工具管理</div>
         <button onClick={load} title="刷新" style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text2)', fontSize: 18, padding: '4px 8px', borderRadius: 4, opacity: 0.75 }}>↻</button>
       </div>
-      <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 20 }}>
+      <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 8 }}>
         Claude Code 内置工具列表，点击工具查看各项目权限配置
+      </div>
+      <div style={{ marginBottom: 20 }}>
+        <PathBadge path="~/.claude/settings.json" />
       </div>
 
       {loading ? <div style={{ color: 'var(--text2)', fontSize: 13 }}>加载中...</div> : (

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useToast } from './Toast.jsx'
+import PathBadge from './PathBadge.jsx'
 
 function McpEditor({ server, scope, projectId, projects, onClose, onSaved, onError, onSuccess }) {
   const isEdit = !!server
@@ -202,7 +203,11 @@ export default function McpPage() {
         <div style={{ fontSize: 18, fontWeight: 700 }}>MCP 管理</div>
         <button onClick={load} title="刷新" style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text2)', fontSize: 18, padding: '4px 8px', borderRadius: 4, opacity: 0.75 }}>↻</button>
       </div>
-      <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16 }}>管理 Model Context Protocol 服务器</div>
+      <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 8 }}>管理 Model Context Protocol 服务器</div>
+      <div style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <PathBadge path="~/.claude.json" label="~/.claude.json（全局）" />
+        <PathBadge path="<project>/.claude/settings.local.json" label="<project>/.claude/settings.local.json（项目级）" />
+      </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
         <select value={projectId} onChange={e => setProjectId(e.target.value)}

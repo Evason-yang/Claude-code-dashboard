@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useToast } from './Toast.jsx'
+import PathBadge from './PathBadge.jsx'
 
 const btn = (primary) => ({
   padding: '6px 14px', fontSize: 12, borderRadius: 5, cursor: 'pointer',
@@ -151,7 +152,11 @@ export default function CommandsPage() {
         <div style={{ fontSize: 18, fontWeight: 700 }}>Slash Commands</div>
         <button onClick={load} title="刷新" style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text2)', fontSize: 18, padding: '4px 8px', borderRadius: 4, opacity: 0.75 }}>↻</button>
       </div>
-      <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16 }}>管理全局和项目级 Slash Commands</div>
+      <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 8 }}>管理全局和项目级 Slash Commands</div>
+      <div style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <PathBadge path="~/.claude/commands/" label="~/.claude/commands/（全局）" />
+        <PathBadge path="<project>/.claude/commands/" label="<project>/.claude/commands/（项目级）" />
+      </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
         <select value={projectId} onChange={e => setProjectId(e.target.value)}

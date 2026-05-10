@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import PathBadge from './PathBadge.jsx'
 
 export default function GlobalPromptPage() {
   const [data, setData] = useState(null)
@@ -32,13 +33,12 @@ export default function GlobalPromptPage() {
         <div style={{ fontSize: 18, fontWeight: 700 }}>全局 CLAUDE.md</div>
         <button onClick={load} title="刷新" style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text2)', fontSize: 18, padding: '4px 8px', borderRadius: 4, opacity: 0.75 }}>↻</button>
       </div>
-      <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16 }}>
+      <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 8 }}>
         作为 system prompt 注入到每次对话，对所有项目生效
       </div>
-
       {data && (
-        <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 10 }}>
-          {data.exists ? `📄 ${data.path}` : `✦ 将创建 ${data.path}`}
+        <div style={{ marginBottom: 16 }}>
+          <PathBadge path={data.path} exists={data.exists} />
         </div>
       )}
 
