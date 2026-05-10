@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useToast } from './Toast.jsx'
 import { marked } from 'marked'
+import PathBadge from './PathBadge.jsx'
 
 export default function SkillsPage() {
   const [plugins, setPlugins] = useState([])
@@ -123,7 +124,10 @@ export default function SkillsPage() {
 
         {/* 标题 + 安装 */}
         <div style={{ padding: '12px 12px 10px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Skill 管理</div>
+          <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Skill 管理</div>
+          <div style={{ marginBottom: 8 }}>
+            <PathBadge path="~/.claude/skills/" label="~/.claude/skills/" />
+          </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <input
               style={{ flex: 1, padding: '5px 8px', fontSize: 12, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--text)', outline: 'none' }}
@@ -218,14 +222,19 @@ export default function SkillsPage() {
             {/* 工具栏 */}
             <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--border)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, fontFamily: 'monospace', color: 'var(--accent)' }}>{selected.skill.name}</span>
-                <span style={{ fontSize: 11, color: 'var(--text2)', marginLeft: 8 }}>{selected.plugin.name}</span>
-                <span style={{ fontSize: 10, marginLeft: 6, padding: '1px 5px', borderRadius: 3,
-                  background: selected.plugin.source === 'local' ? '#3fb95022' : 'var(--bg3)',
-                  color: selected.plugin.source === 'local' ? '#3fb950' : 'var(--text2)' }}>
-                  {selected.plugin.source === 'local' ? '本地' : '插件'}
-                </span>
-                {canEdit && <span style={{ fontSize: 10, marginLeft: 4, padding: '1px 5px', borderRadius: 3, background: '#58a6ff22', color: '#58a6ff' }}>可编辑</span>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, fontFamily: 'monospace', color: 'var(--accent)' }}>{selected.skill.name}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text2)' }}>{selected.plugin.name}</span>
+                  <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 3,
+                    background: selected.plugin.source === 'local' ? '#3fb95022' : 'var(--bg3)',
+                    color: selected.plugin.source === 'local' ? '#3fb950' : 'var(--text2)' }}>
+                    {selected.plugin.source === 'local' ? '本地' : '插件'}
+                  </span>
+                  {canEdit && <span style={{ fontSize: 10, padding: '1px 5px', borderRadius: 3, background: '#58a6ff22', color: '#58a6ff' }}>可编辑</span>}
+                </div>
+                {selected.skill.filePath && (
+                  <PathBadge path={selected.skill.filePath} />
+                )}
               </div>
 
               {/* 启用/禁用切换 */}
