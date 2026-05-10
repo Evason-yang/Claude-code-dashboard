@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url'
 import { existsSync, readdirSync, readFileSync, writeFileSync, copyFileSync, mkdirSync, statSync, rmSync } from 'fs'
 import os from 'os'
 import { loadConfig, saveConfig } from './config.js'
-import { buildProjectList, getProjectById } from './projects.js'
+import { buildProjectList, getProjectById, registerPathMapping } from './projects.js'
 import { listSessions, getSession } from './sessions.js'
 import { getGitLog } from './git.js'
 import { listMemories, getMemory, saveMemory, deleteMemory, listGlobalMemories, getGlobalMemory, saveGlobalMemory, deleteGlobalMemory } from './memories.js'
@@ -38,6 +38,7 @@ app.post('/api/projects', (req, res) => {
   const isSingleProject = mode === 'project' || (mode !== 'scandir' && existsSync(claudeDir))
   if (isSingleProject) {
     if (!cfg.manualProjects.includes(path)) { cfg.manualProjects.push(path); saveConfig(cfg) }
+    registerPathMapping(path)  // 写入 pathMap，与 Claude Code 解耦
     res.json({ ok: true, type: 'project' })
   } else {
     if (!cfg.scanDirs.includes(path)) { cfg.scanDirs.push(path); saveConfig(cfg) }

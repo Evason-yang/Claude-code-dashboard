@@ -10,7 +10,8 @@ function getConfigPath() {
 
 export const DEFAULT_CONFIG = {
   scanDirs: [],
-  manualProjects: []
+  manualProjects: [],
+  pathMap: {}   // encoded → realPath，我们自己维护，与 Claude Code 解耦
 }
 
 export function loadConfig() {

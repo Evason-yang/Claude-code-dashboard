@@ -3,6 +3,7 @@ import { join, basename } from 'path'
 import { createHash } from 'crypto'
 import os from 'os'
 import { getClaudeProjectDir, encodePath } from './sessions.js'
+import { loadConfig, saveConfig } from './config.js'
 
 const CLAUDE_PROJECTS_DIR = join(os.homedir(), '.claude', 'projects')
 
@@ -35,24 +36,44 @@ function getLastActive(projectPath) {
   }
 }
 
-// encoded → realPath 缓存（进程级别，避免重复扫描）
+// 内存缓存（进程级，避免重复 I/O）
 const decodeCache = new Map()
 
-// 跳过这些目录（不可能是 Claude Code 项目根目录）
+// 跳过这些目录
 const SKIP_DIRS = new Set([
   'node_modules', '.git', '.svn', '__pycache__', '.cache',
   'build', 'dist', 'target', 'out', '.idea', '.vscode',
   'Library', 'Applications', 'System', 'Volumes', 'private', 'etc', 'tmp',
 ])
 
+// 把解码结果写入 config.pathMap，与 Claude Code 解耦、持久化
+function savePathMap(encoded, realPath) {
+  try {
+    const cfg = loadConfig()
+    if (!cfg.pathMap) cfg.pathMap = {}
+    if (cfg.pathMap[encoded] !== realPath) {
+      cfg.pathMap[encoded] = realPath
+      saveConfig(cfg)
+    }
+  } catch {}
+}
+
 // 从 ~/.claude/projects/<encoded> 还原真实路径
-// 策略：在 home 下做有限深度精确匹配，encodePath(候选) === encoded 即命中
+// 优先级：1) 内存缓存  2) config.pathMap  3) 文件系统搜索  4) 字符串猜测
 function decodeProjectPath(encoded) {
   if (decodeCache.has(encoded)) return decodeCache.get(encoded)
 
-  const home = os.homedir()
+  // 优先查我们自己维护的 pathMap
+  try {
+    const cfg = loadConfig()
+    const mapped = (cfg.pathMap || {})[encoded]
+    if (mapped) {
+      decodeCache.set(encoded, mapped)
+      return mapped
+    }
+  } catch {}
 
-  // 编码串中连续字母数字段的数量 ≈ 路径层数，限制搜索深度
+  const home = os.homedir()
   const targetDepth = Math.min((encoded.match(/[a-zA-Z0-9]+/g) || []).length, 8)
 
   function search(dir, depth) {
@@ -66,7 +87,6 @@ function decodeProjectPath(encoded) {
       try { isDir = statSync(full).isDirectory() } catch { continue }
       if (!isDir) continue
       if (encodePath(full) === encoded) return full
-      // 只有当前路径是目标的前缀（编码串以当前编码开头）才继续递归
       const currentEncoded = encodePath(full)
       if (encoded.startsWith(currentEncoded) && depth > 1) {
         const found = search(full, depth - 1)
@@ -76,15 +96,11 @@ function decodeProjectPath(encoded) {
     return null
   }
 
-  // 搜索根：从 home 往上逐级追加，确保覆盖各平台路径结构
-  // 例如 macOS: /Users/name → 加 /Users
-  //      Linux: /home/name → 加 /home
-  //      Windows: C:\Users\name → 加 C:\Users
   const roots = new Set([home])
   let cur = home
   for (let i = 0; i < 3; i++) {
     const parent = join(cur, '..')
-    if (parent === cur) break  // 到根了
+    if (parent === cur) break
     roots.add(parent)
     cur = parent
   }
@@ -95,19 +111,27 @@ function decodeProjectPath(encoded) {
   for (const root of roots) {
     if (!existsSync(root)) continue
     const found = search(root, targetDepth)
-    if (found) { decodeCache.set(encoded, found); return found }
+    if (found) {
+      decodeCache.set(encoded, found)
+      savePathMap(encoded, found)   // 持久化，下次直接命中
+      return found
+    }
   }
 
-  // fallback：字符串猜测（项目目录已不存在时）
+  // fallback：字符串猜测
   const tokens = encoded.replace(/^-+/, '').split('-').filter(Boolean)
-  let fallback
-  if (process.platform === 'win32' && tokens.length > 0 && /^[A-Za-z]$/.test(tokens[0])) {
-    fallback = tokens[0].toUpperCase() + ':\\' + tokens.slice(1).join('\\')
-  } else {
-    fallback = '/' + tokens.join('/')
-  }
+  const fallback = process.platform === 'win32' && /^[A-Za-z]$/.test(tokens[0])
+    ? tokens[0].toUpperCase() + ':\\' + tokens.slice(1).join('\\')
+    : '/' + tokens.join('/')
   decodeCache.set(encoded, fallback)
   return fallback
+}
+
+// 手动添加项目时，直接把 encoded→realPath 写入 pathMap
+export function registerPathMapping(realPath) {
+  const encoded = encodePath(realPath)
+  decodeCache.set(encoded, realPath)
+  savePathMap(encoded, realPath)
 }
 
 // 扫描 ~/.claude/projects/ 得到所有有会话记录的项目
