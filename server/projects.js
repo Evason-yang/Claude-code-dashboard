@@ -35,70 +35,66 @@ function getLastActive(projectPath) {
   }
 }
 
+// encoded → realPath 缓存（进程级别，避免重复扫描）
+const decodeCache = new Map()
+
+// 跳过这些目录（不可能是 Claude Code 项目根目录）
+const SKIP_DIRS = new Set([
+  'node_modules', '.git', '.svn', '__pycache__', '.cache',
+  'build', 'dist', 'target', 'out', '.idea', '.vscode',
+  'Library', 'Applications', 'System', 'Volumes', 'private', 'etc', 'tmp',
+])
+
 // 从 ~/.claude/projects/<encoded> 还原真实路径
-// 编码规则：/ → -（包括开头的 /）
-// 还原：用动态规划贪心匹配文件系统，逐段验证路径存在
+// 策略：在 home 下做有限深度精确匹配，encodePath(候选) === encoded 即命中
 function decodeProjectPath(encoded) {
-  // encoded 形如 -Users-username--tmux（所有非字母数字字符都被替换为 -）
-  // 还原：贪心匹配文件系统，逐段验证路径存在（处理含 - 或 . 的目录名）
-  // 去掉开头的 -（代表根 /），剩余按 - 分割
-  const tokens = encoded.replace(/^-+/, '').split('-')
+  if (decodeCache.has(encoded)) return decodeCache.get(encoded)
 
-  function resolve(idx, current) {
-    if (idx === tokens.length) return existsSync(current) ? current : null
-    // 尝试把从 idx 开始的连续若干 token 合并为一个路径段
-    // 路径段中的分隔符可能是 - 或 . 等，需要枚举所有可能的合并方式
-    function trySegment(tokenIdx, prefix) {
-      if (tokenIdx >= tokens.length) return null
-      // 当前 token 追加到 prefix（用 - 连接，因为原始字符可能是 - 或其他）
-      const withDash = prefix ? prefix + '-' + tokens[tokenIdx] : tokens[tokenIdx]
-      // 也尝试用 . 连接（处理 .tmux → -tmux 这种以 . 开头的目录）
-      const withDot = prefix ? prefix + '.' + tokens[tokenIdx] : '.' + tokens[tokenIdx]
+  const home = os.homedir()
 
-      const candidates = prefix === ''
-        ? [tokens[tokenIdx], '.' + tokens[tokenIdx]]  // 首个 token：尝试普通和点开头
-        : [withDash, withDot]
+  // 编码串中连续字母数字段的数量 ≈ 路径层数，限制搜索深度
+  const targetDepth = Math.min((encoded.match(/[a-zA-Z0-9]+/g) || []).length, 8)
 
-      for (const seg of candidates) {
-        const candidate = join(current, seg)
-        const result = resolve(tokenIdx + 1, candidate)
-        if (result) return result
-      }
-      return null
-    }
-
-    // 简化：直接枚举从 idx 开始的连续 token 合并
-    let segment = ''
-    for (let end = idx; end < tokens.length; end++) {
-      // 尝试普通合并（- 连接）
-      segment = segment ? segment + '-' + tokens[end] : tokens[end]
-      const r1 = resolve(end + 1, join(current, segment))
-      if (r1) return r1
-
-      // 尝试以 . 开头的目录名（如 .tmux、.config）
-      if (end === idx) {
-        const dotSeg = '.' + tokens[end]
-        const r2 = resolve(end + 1, join(current, dotSeg))
-        if (r2) return r2
+  function search(dir, depth) {
+    if (depth === 0) return null
+    let entries
+    try { entries = readdirSync(dir) } catch { return null }
+    for (const entry of entries) {
+      if (SKIP_DIRS.has(entry)) continue
+      const full = join(dir, entry)
+      let isDir = false
+      try { isDir = statSync(full).isDirectory() } catch { continue }
+      if (!isDir) continue
+      if (encodePath(full) === encoded) return full
+      // 只有当前路径是目标的前缀（编码串以当前编码开头）才继续递归
+      const currentEncoded = encodePath(full)
+      if (encoded.startsWith(currentEncoded) && depth > 1) {
+        const found = search(full, depth - 1)
+        if (found) return found
       }
     }
     return null
   }
 
-  // 尝试 Unix 根路径
-  const resolvedUnix = resolve(0, '/')
-  if (resolvedUnix) return resolvedUnix
+  const roots = [home, join(home, '..')]
+  if (process.platform === 'win32') roots.push('C:\\Users', 'D:\\Users')
 
-  // 尝试 Windows 驱动器
-  if (process.platform === 'win32' && tokens.length > 0 && /^[A-Za-z]$/.test(tokens[0])) {
-    const drive = tokens[0].toUpperCase() + ':\\'
-    const resolvedWin = resolve(1, drive)
-    if (resolvedWin) return resolvedWin
-    return drive + tokens.slice(1).join('\\')
+  for (const root of roots) {
+    if (!existsSync(root)) continue
+    const found = search(root, targetDepth)
+    if (found) { decodeCache.set(encoded, found); return found }
   }
 
-  // fallback
-  return '/' + tokens.join('/')
+  // fallback：字符串猜测（项目目录已不存在时）
+  const tokens = encoded.replace(/^-+/, '').split('-').filter(Boolean)
+  let fallback
+  if (process.platform === 'win32' && tokens.length > 0 && /^[A-Za-z]$/.test(tokens[0])) {
+    fallback = tokens[0].toUpperCase() + ':\\' + tokens.slice(1).join('\\')
+  } else {
+    fallback = '/' + tokens.join('/')
+  }
+  decodeCache.set(encoded, fallback)
+  return fallback
 }
 
 // 扫描 ~/.claude/projects/ 得到所有有会话记录的项目
