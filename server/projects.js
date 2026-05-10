@@ -120,9 +120,17 @@ function decodeProjectPath(encoded) {
 
   // fallback：字符串猜测
   const tokens = encoded.replace(/^-+/, '').split('-').filter(Boolean)
-  const fallback = process.platform === 'win32' && /^[A-Za-z]$/.test(tokens[0])
-    ? tokens[0].toUpperCase() + ':\\' + tokens.slice(1).join('\\')
-    : '/' + tokens.join('/')
+  let fallback
+  if (process.platform === 'win32') {
+    // Windows 编码保留冒号，第一个 token 形如 "C:"
+    if (/^[A-Za-z]:$/.test(tokens[0])) {
+      fallback = tokens[0].toUpperCase() + '\\' + tokens.slice(1).join('\\')
+    } else {
+      fallback = tokens.join('\\')
+    }
+  } else {
+    fallback = '/' + tokens.join('/')
+  }
   decodeCache.set(encoded, fallback)
   return fallback
 }
