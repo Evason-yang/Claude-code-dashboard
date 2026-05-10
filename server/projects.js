@@ -76,8 +76,21 @@ function decodeProjectPath(encoded) {
     return null
   }
 
-  const roots = [home, join(home, '..')]
-  if (process.platform === 'win32') roots.push('C:\\Users', 'D:\\Users')
+  // 搜索根：从 home 往上逐级追加，确保覆盖各平台路径结构
+  // 例如 macOS: /Users/name → 加 /Users
+  //      Linux: /home/name → 加 /home
+  //      Windows: C:\Users\name → 加 C:\Users
+  const roots = new Set([home])
+  let cur = home
+  for (let i = 0; i < 3; i++) {
+    const parent = join(cur, '..')
+    if (parent === cur) break  // 到根了
+    roots.add(parent)
+    cur = parent
+  }
+  if (process.platform === 'win32') {
+    ;['C:\\Users', 'D:\\Users', 'C:\\', 'D:\\'].forEach(r => roots.add(r))
+  }
 
   for (const root of roots) {
     if (!existsSync(root)) continue
