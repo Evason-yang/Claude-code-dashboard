@@ -13,7 +13,14 @@ echo ""
 # ── 停止正在运行的服务 ────────────────────────────────────────────────────────
 
 echo "▸ 停止服务..."
-pkill -f "node.*claude-code-dashboard" 2>/dev/null && echo "   已停止服务进程" || echo "   服务未在运行"
+# 先按端口杀进程，再按路径兜底
+PIDS=$(lsof -ti tcp:$PORT 2>/dev/null || true)
+if [ -n "$PIDS" ]; then
+  echo "$PIDS" | xargs kill -9 2>/dev/null || true
+  echo "   已停止端口 $PORT 上的服务进程"
+else
+  pkill -f "node.*server/index.js" 2>/dev/null && echo "   已停止服务进程" || echo "   服务未在运行"
+fi
 
 # ── 开机自启动 ────────────────────────────────────────────────────────────────
 
