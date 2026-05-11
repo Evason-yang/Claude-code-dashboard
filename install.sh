@@ -67,6 +67,10 @@ echo ""
 echo "▸ 构建前端..."
 npm run build --silent
 
+echo ""
+echo "▸ 创建桌面图标..."
+node scripts/setup-desktop.js || echo "⚠️  桌面图标创建失败，可手动运行：node scripts/setup-desktop.js"
+
 # ── 创建启动脚本 ─────────────────────────────────────────────────────────────
 
 LAUNCHER="$HOME/.local/bin/claude-dashboard"

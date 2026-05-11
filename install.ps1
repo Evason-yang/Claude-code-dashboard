@@ -60,6 +60,14 @@ Write-Host ""
 Write-Host "▸ 构建前端..."
 npm run build --silent
 
+Write-Host ""
+Write-Host "▸ 创建桌面图标..."
+try {
+    node scripts\setup-desktop.js
+} catch {
+    Write-Host "⚠️  桌面图标创建失败，可手动运行：node scripts\setup-desktop.js"
+}
+
 # 创建启动脚本
 $launcherDir = "$env:USERPROFILE\.local\bin"
 New-Item -ItemType Directory -Force -Path $launcherDir | Out-Null
