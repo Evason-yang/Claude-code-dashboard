@@ -46,7 +46,55 @@ export default function GlobalSettingsPage() {
   const [rawMode, setRawMode] = useState(false)
   const [rawText, setRawText] = useState('')
   const [rawError, setRawError] = useState('')
+  const [updateInfo, setUpdateInfo] = useState(null)   // { local, latest, hasUpdate }
+  const [updateChecking, setUpdateChecking] = useState(false)
+  const [updateRunning, setUpdateRunning] = useState(false)
   const { showToast } = useToast()
+
+  async function checkUpdate() {
+    setUpdateChecking(true)
+    setUpdateInfo(null)
+    try {
+      const res = await fetch('/api/update/check')
+      const data = await res.json()
+      setUpdateInfo(data)
+    } catch (e) {
+      showToast('检查更新失败：' + e.message, 'error')
+    } finally {
+      setUpdateChecking(false)
+    }
+  }
+
+  async function runUpdate() {
+    setUpdateRunning(true)
+    try {
+      const res = await fetch('/api/update/run', { method: 'POST' })
+      const data = await res.json()
+      if (data.ok) {
+        showToast('更新完成，请重启服务以生效', 'success')
+        setUpdateInfo(prev => ({ ...prev, hasUpdate: false }))
+      } else {
+        showToast('更新失败：' + data.error, 'error')
+      }
+    } catch (e) {
+      showToast('更新失败：' + e.message, 'error')
+    } finally {
+      setUpdateRunning(false)
+    }
+  }
+
+  async function quitService() {
+    if (!confirm('确定要停止服务吗？停止后页面将无法访问。')) return
+    await fetch('/api/quit', { method: 'POST' }).catch(() => {})
+    showToast('服务已停止', 'success')
+  }
+
+  async function restartService() {
+    if (!confirm('确定要重启服务吗？重启过程中页面短暂不可访问。')) return
+    await fetch('/api/restart', { method: 'POST' }).catch(() => {})
+    showToast('正在重启，请稍候...', 'success')
+    setTimeout(() => window.location.reload(), 3000)
+  }
 
   async function load() {
     const res = await fetch('/api/settings')
@@ -199,6 +247,53 @@ export default function GlobalSettingsPage() {
               )}
             </Section>
           )}
+
+          {/* 服务管理 */}
+          <Section title="服务管理">
+            <Row label="检查更新" desc="与 GitHub 最新版本对比">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {updateInfo && (
+                  <span style={{ fontSize: 12, color: updateInfo.hasUpdate ? '#f0883e' : 'var(--text2)' }}>
+                    {updateInfo.hasUpdate
+                      ? `v${updateInfo.local} → v${updateInfo.latest}`
+                      : `已是最新 v${updateInfo.local}`}
+                  </span>
+                )}
+                <button
+                  onClick={checkUpdate}
+                  disabled={updateChecking}
+                  style={{ padding: '5px 12px', fontSize: 12, borderRadius: 5, border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', cursor: updateChecking ? 'not-allowed' : 'pointer', opacity: updateChecking ? 0.6 : 1 }}
+                >
+                  {updateChecking ? '检查中...' : '检查更新'}
+                </button>
+                {updateInfo?.hasUpdate && (
+                  <button
+                    onClick={runUpdate}
+                    disabled={updateRunning}
+                    style={{ padding: '5px 12px', fontSize: 12, borderRadius: 5, border: 'none', background: '#f0883e', color: '#fff', cursor: updateRunning ? 'not-allowed' : 'pointer', opacity: updateRunning ? 0.6 : 1 }}
+                  >
+                    {updateRunning ? '更新中...' : '立即更新'}
+                  </button>
+                )}
+              </div>
+            </Row>
+            <Row label="重启服务" desc="重新启动后端服务，页面短暂不可访问">
+              <button
+                onClick={restartService}
+                style={{ padding: '5px 12px', fontSize: 12, borderRadius: 5, border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', cursor: 'pointer' }}
+              >
+                重启服务
+              </button>
+            </Row>
+            <Row label="停止服务" desc="停止后需点击桌面图标重新启动">
+              <button
+                onClick={quitService}
+                style={{ padding: '5px 12px', fontSize: 12, borderRadius: 5, border: '1px solid #f85149', background: 'transparent', color: '#f85149', cursor: 'pointer' }}
+              >
+                停止服务
+              </button>
+            </Row>
+          </Section>
 
           {/* 其他字段（只读展示） */}
           <Section title="其他配置（只读）">

@@ -1084,6 +1084,47 @@ app.get('/api/version', async (req, res) => {
   }
 })
 
+// 检查更新
+app.get('/api/update/check', async (req, res) => {
+  try {
+    const { checkUpdate } = await import('./updater.js')
+    const result = await checkUpdate()
+    res.json(result)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// 执行更新
+app.post('/api/update/run', async (req, res) => {
+  try {
+    const { runUpdate } = await import('./updater.js')
+    const result = runUpdate()
+    res.json(result)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// 停止服务
+app.post('/api/quit', (req, res) => {
+  res.json({ ok: true })
+  setTimeout(() => process.exit(0), 300)
+})
+
+// 重启服务
+app.post('/api/restart', (req, res) => {
+  res.json({ ok: true })
+  setTimeout(() => {
+    spawn(process.execPath, process.argv.slice(1), {
+      cwd: process.cwd(),
+      detached: true,
+      stdio: 'inherit'
+    }).unref()
+    process.exit(0)
+  }, 300)
+})
+
 // --- Static (production) ---
 if (existsSync(PUBLIC_DIR)) {
   app.use(express.static(PUBLIC_DIR))
