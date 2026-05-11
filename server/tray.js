@@ -21,23 +21,39 @@ export async function initTray() {
   let autostartOn = false
   try { autostartOn = isEnabled() } catch {}
 
-  // 菜单项索引（含分隔符）：
-  // 0: 打开界面
-  // 1: 检查更新
-  // 2: separator
-  // 3: 开机自启动
-  // 4: separator
-  // 5: 退出
-
   function getAutostartTitle() {
     return autostartOn ? '✓ 开机自启动' : '  开机自启动'
+  }
+
+  // 持有对象引用，以便库注入 __id 后可以通过 sendAction 更新
+  const autostartItem = {
+    title: getAutostartTitle(),
+    tooltip: '设置是否开机自动启动',
+    checked: false,
+    enabled: true,
+    click: () => {
+      try {
+        const current = isEnabled()
+        if (current) disable()
+        else enable()
+        autostartOn = isEnabled()
+        autostartItem.title = getAutostartTitle()
+        systray.sendAction({
+          type: 'update-item',
+          item: autostartItem
+        })
+        console.log(`[tray] 开机自启动已${autostartOn ? '启用' : '禁用'}`)
+      } catch (e) {
+        console.warn('[tray] 自启动设置失败:', e.message)
+      }
+    }
   }
 
   let systray
   try {
     systray = new SysTray({
       menu: {
-        icon: '',
+        icon: null,
         title: 'Claude Dashboard',
         tooltip: 'Claude Code Dashboard',
         items: [
@@ -74,33 +90,7 @@ export async function initTray() {
             }
           },
           SysTray.separator,
-          {
-            title: getAutostartTitle(),
-            tooltip: '设置是否开机自动启动',
-            checked: false,
-            enabled: true,
-            click: () => {
-              try {
-                const current = isEnabled()
-                if (current) disable()
-                else enable()
-                autostartOn = isEnabled()
-                systray.sendAction({
-                  type: 'update-item',
-                  item: {
-                    title: getAutostartTitle(),
-                    tooltip: '设置是否开机自动启动',
-                    checked: false,
-                    enabled: true
-                  },
-                  seq_id: 3
-                })
-                console.log(`[tray] 开机自启动已${autostartOn ? '启用' : '禁用'}`)
-              } catch (e) {
-                console.warn('[tray] 自启动设置失败:', e.message)
-              }
-            }
-          },
+          autostartItem,
           SysTray.separator,
           {
             title: '退出',
@@ -115,10 +105,19 @@ export async function initTray() {
         ]
       }
     })
+
+    await systray.ready()
   } catch (e) {
     console.warn('[tray] 无法初始化系统托盘:', e.message)
     return
   }
+
+  // 注册点击处理器，调用每个菜单项的 click 回调
+  systray.onClick(action => {
+    if (action.item && typeof action.item.click === 'function') {
+      action.item.click()
+    }
+  })
 
   console.log('[tray] 系统托盘已初始化')
 }
