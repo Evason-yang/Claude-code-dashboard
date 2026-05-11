@@ -14,6 +14,7 @@ import { readPrompt, writePrompt } from './prompts.js'
 import { readToolPerms, writeToolPerms } from './toolperms.js'
 import { listCommands, saveCommand, deleteCommand } from './commands.js'
 import { execSync, exec, spawn } from 'child_process'
+import { initTray } from './tray.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.HOME || process.env.USERPROFILE || os.homedir()
@@ -1095,6 +1096,7 @@ app.listen(PORT, () => {
   if (existsSync(PUBLIC_DIR) && process.env.NODE_ENV !== 'test') {
     import('open').then(m => m.default(`http://localhost:${PORT}`))
   }
+  initTray().catch(e => console.warn('[tray] 初始化失败:', e.message))
 })
 
 export default app
