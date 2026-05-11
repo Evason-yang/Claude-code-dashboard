@@ -1,5 +1,7 @@
 // server/tray.js
-import SysTray from 'systray2'
+import { createRequire } from 'module'
+const require = createRequire(import.meta.url)
+const SysTray = require('systray2').default
 import { checkUpdate, runUpdate } from './updater.js'
 import { isEnabled, enable, disable } from './autostart.js'
 import open from 'open'
