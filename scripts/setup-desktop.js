@@ -14,9 +14,16 @@ const PORT = 3000
 
 // ── macOS：创建 .app Bundle ──────────────────────────────────────────────────
 function setupMac() {
-  const appPath = join(HOME, 'Desktop', 'Claude Dashboard.app')
+  const appPath = '/Applications/Claude Dashboard.app'
   const contentsDir = join(appPath, 'Contents')
   const macOSDir = join(contentsDir, 'MacOS')
+
+  // 移除旧的桌面图标（如果存在）
+  const oldAppPath = join(HOME, 'Desktop', 'Claude Dashboard.app')
+  if (existsSync(oldAppPath)) {
+    execSync(`rm -rf "${oldAppPath}"`)
+  }
+
   mkdirSync(macOSDir, { recursive: true })
 
   writeFileSync(join(contentsDir, 'Info.plist'), `<?xml version="1.0" encoding="UTF-8"?>
@@ -45,7 +52,7 @@ else
 fi
 `)
   chmodSync(launcher, 0o755)
-  console.log(`✅ 桌面图标已创建：${appPath}`)
+  console.log(`✅ 应用已安装：${appPath}`)
 }
 
 // ── Windows：创建 .lnk 快捷方式 ──────────────────────────────────────────────

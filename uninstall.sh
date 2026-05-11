@@ -43,13 +43,16 @@ fi
 echo ""
 echo "▸ 移除桌面图标..."
 if [ "$(uname)" = "Darwin" ]; then
-  APP="$HOME/Desktop/Claude Dashboard.app"
+  APP="/Applications/Claude Dashboard.app"
+  OLD_APP="$HOME/Desktop/Claude Dashboard.app"
   if [ -d "$APP" ]; then
     rm -rf "$APP"
     echo "   已移除 $APP"
   else
-    echo "   桌面图标不存在"
+    echo "   应用不存在"
   fi
+  # 兼容旧版本桌面图标
+  [ -d "$OLD_APP" ] && rm -rf "$OLD_APP" && echo "   已移除旧桌面图标"
 else
   DESKTOP_FILE="$HOME/Desktop/claude-dashboard.desktop"
   LAUNCHER_SH="$INSTALL_DIR/launch.sh"
