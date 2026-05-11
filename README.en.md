@@ -20,6 +20,8 @@ A local web UI for managing multiple [Claude Code](https://claude.ai/code) proje
 - **Slash Commands** — Create and manage custom slash commands
 - **Update Notifications** — Sidebar shows a prompt when a new version is available
 - **Dark / Light mode** — Follows system or manual toggle
+- **System Tray** — Tray icon stays in the menu bar while the service runs; open UI, check for updates, toggle autostart, or quit from the right-click menu
+- **Desktop Shortcut** — Installer creates a desktop icon automatically (macOS `.app`, Windows `.lnk`, Linux `.desktop`); click to launch
 
 ## Requirements
 
@@ -41,7 +43,19 @@ curl -fsSL https://raw.githubusercontent.com/Evason-yang/Claude-code-dashboard/m
 irm https://raw.githubusercontent.com/Evason-yang/Claude-code-dashboard/main/install.ps1 | iex
 ```
 
-The script checks dependencies, clones the repo, installs packages, builds the frontend, and asks if you want to start immediately. Run the same command again to update to the latest version.
+The script checks dependencies, clones the repo, installs packages, builds the frontend, creates a desktop shortcut, and asks if you want to start immediately. Run the same command again to update to the latest version.
+
+**Uninstall:**
+
+```bash
+# macOS / Linux
+~/claude-code-dashboard/uninstall.sh
+```
+
+```powershell
+# Windows
+~\claude-code-dashboard\uninstall.ps1
+```
 
 **Manual install:**
 

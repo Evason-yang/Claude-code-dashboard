@@ -20,6 +20,8 @@
 - **Slash Commands** — 创建和管理自定义斜杠命令
 - **版本更新提示** — 有新版本时侧边栏自动提示
 - **深色 / 浅色模式** — 跟随系统或手动切换
+- **系统托盘** — 服务启动后托盘图标常驻，支持打开界面、检查更新、开机自启动开关、退出
+- **桌面图标** — 安装时自动创建桌面快捷方式（macOS `.app`、Windows `.lnk`、Linux `.desktop`），点击即启动
 
 ## 环境要求
 
@@ -41,7 +43,19 @@ curl -fsSL https://raw.githubusercontent.com/Evason-yang/Claude-code-dashboard/m
 irm https://raw.githubusercontent.com/Evason-yang/Claude-code-dashboard/main/install.ps1 | iex
 ```
 
-脚本会自动检查依赖、克隆仓库、安装依赖、构建前端，并询问是否立即启动。再次运行同一命令可更新到最新版本。
+脚本会自动检查依赖、克隆仓库、安装依赖、构建前端、创建桌面图标，并询问是否立即启动。再次运行同一命令可更新到最新版本。
+
+**卸载：**
+
+```bash
+# macOS / Linux
+~/claude-code-dashboard/uninstall.sh
+```
+
+```powershell
+# Windows
+~\claude-code-dashboard\uninstall.ps1
+```
 
 **手动安装：**
 
