@@ -43,6 +43,7 @@ export default function GlobalSettingsPage() {
   const [updateInfo, setUpdateInfo] = useState(null)   // { local, latest, hasUpdate }
   const [updateChecking, setUpdateChecking] = useState(false)
   const [updateRunning, setUpdateRunning] = useState(false)
+  const [autostart, setAutostart] = useState(null)
   const { showToast } = useToast()
 
   async function checkUpdate() {
@@ -90,16 +91,34 @@ export default function GlobalSettingsPage() {
     setTimeout(() => window.location.reload(), 3000)
   }
 
+  async function toggleAutostart(checked) {
+    try {
+      const res = await fetch('/api/autostart', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: checked })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setAutostart(data.enabled)
+      showToast(data.enabled ? '开机自启动已启用，重启电脑后生效' : '开机自启动已关闭', 'success')
+    } catch (e) {
+      showToast('设置失败：' + e.message, 'error')
+    }
+  }
+
   async function load() {
-    const [settingsRes, modelsRes] = await Promise.all([
+    const [settingsRes, modelsRes, autostartRes] = await Promise.all([
       fetch('/api/settings'),
-      fetch('/api/models')
+      fetch('/api/models'),
+      fetch('/api/autostart')
     ])
     const data = await settingsRes.json()
     setSettings(data)
     setRawText(JSON.stringify(data, null, 2))
     const modelsData = await modelsRes.json()
     setAvailableModels(modelsData.available || [])
+    try { setAutostart((await autostartRes.json()).enabled) } catch {}
   }
 
   useEffect(() => { load() }, [])
@@ -249,6 +268,20 @@ export default function GlobalSettingsPage() {
 
           {/* 服务管理 */}
           <Section title="服务管理">
+            <Row label="开机自启动" desc="电脑开机后自动启动 Dashboard 服务">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={!!autostart}
+                  disabled={autostart === null}
+                  onChange={e => toggleAutostart(e.target.checked)}
+                  style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--accent)' }}
+                />
+                <span style={{ fontSize: 13, color: autostart ? 'var(--accent)' : 'var(--text2)' }}>
+                  {autostart === null ? '检测中...' : autostart ? '已启用' : '未启用'}
+                </span>
+              </label>
+            </Row>
             <Row label="检查更新" desc="与 GitHub 最新版本对比">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {updateInfo && (

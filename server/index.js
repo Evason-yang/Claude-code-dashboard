@@ -15,6 +15,7 @@ import { readToolPerms, writeToolPerms } from './toolperms.js'
 import { listCommands, saveCommand, deleteCommand } from './commands.js'
 import { execSync, exec, spawn } from 'child_process'
 import { initTray } from './tray.js'
+import { isEnabled as isAutostartEnabled, enable as enableAutostart, disable as disableAutostart } from './autostart.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const HOME = process.env.HOME || process.env.USERPROFILE || os.homedir()
@@ -1148,6 +1149,26 @@ app.post('/api/update/run', async (req, res) => {
     const { runUpdate } = await import('./updater.js')
     const result = runUpdate()
     res.json(result)
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+// --- 开机自启动 ---
+app.get('/api/autostart', (req, res) => {
+  try {
+    res.json({ enabled: isAutostartEnabled() })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
+app.put('/api/autostart', (req, res) => {
+  const { enabled } = req.body
+  try {
+    if (enabled) enableAutostart()
+    else disableAutostart()
+    res.json({ ok: true, enabled: isAutostartEnabled() })
   } catch (e) {
     res.status(500).json({ error: e.message })
   }
