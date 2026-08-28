@@ -1,13 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useToast } from './Toast.jsx'
 
-const AVAILABLE_MODELS = [
-  { id: 'claude-opus-4-6',      label: 'Claude Opus 4.6' },
-  { id: 'claude-opus-4-6[1m]',  label: 'Claude Opus 4.6 (1M)' },
-  { id: 'claude-sonnet-4-6',    label: 'Claude Sonnet 4.6' },
-  { id: 'claude-haiku-4-5',     label: 'Claude Haiku 4.5' },
-]
-
 const PERMISSION_MODES = [
   { id: 'auto',         label: 'auto',         desc: '自动批准低风险操作' },
   { id: 'default',      label: 'default',       desc: '需要确认大多数操作' },
@@ -42,6 +35,7 @@ function Row({ label, desc, children }) {
 
 export default function GlobalSettingsPage() {
   const [settings, setSettings] = useState(null)
+  const [availableModels, setAvailableModels] = useState([])
   const [saving, setSaving] = useState(false)
   const [rawMode, setRawMode] = useState(false)
   const [rawText, setRawText] = useState('')
@@ -97,10 +91,15 @@ export default function GlobalSettingsPage() {
   }
 
   async function load() {
-    const res = await fetch('/api/settings')
-    const data = await res.json()
+    const [settingsRes, modelsRes] = await Promise.all([
+      fetch('/api/settings'),
+      fetch('/api/models')
+    ])
+    const data = await settingsRes.json()
     setSettings(data)
     setRawText(JSON.stringify(data, null, 2))
+    const modelsData = await modelsRes.json()
+    setAvailableModels(modelsData.available || [])
   }
 
   useEffect(() => { load() }, [])
@@ -196,7 +195,7 @@ export default function GlobalSettingsPage() {
                 onChange={e => patch('model', e.target.value)}
                 style={{ padding: '5px 10px', fontSize: 13, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--text)', cursor: 'pointer' }}
               >
-                {AVAILABLE_MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                {availableModels.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
               </select>
             </Row>
           </Section>

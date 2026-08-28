@@ -21,10 +21,9 @@ const S = {
 }
 
 const MODEL_SPEED = {
-  'claude-opus-4-6': '强',
-  'claude-opus-4-6[1m]': '强 · 1M ctx',
-  'claude-sonnet-4-6': '快',
-  'claude-haiku-4-5': '最快',
+  'claude-opus-4-8': '强', 'claude-opus-4-8[1m]': '强 · 1M ctx', 'claude-sonnet-4-8': '快', 'claude-haiku-4-7': '最快',
+  'claude-opus-4-7': '强', 'claude-opus-4-7[1m]': '强 · 1M ctx', 'claude-sonnet-4-7': '快', 'claude-haiku-4-6': '最快',
+  'claude-opus-4-6': '强', 'claude-opus-4-6[1m]': '强 · 1M ctx', 'claude-sonnet-4-6': '快', 'claude-haiku-4-5': '最快',
 }
 
 export default function ModelsPage() {

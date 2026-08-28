@@ -53,9 +53,12 @@ export async function initTray() {
 
   let systray
   try {
+    // 16x16 蓝色圆形图标（base64 PNG）
+    const ICON = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAOUlEQVR4nGNgoBZw2PKfWHWYiDTVOPXgUY1FD0HV6HporIFI1eTooaenSY4HcmIajx6cqtF0YhUHAObZIn8nbe0EAAAAAElFTkSuQmCC'
+
     systray = new SysTray({
       menu: {
-        icon: null,
+        icon: ICON,
         title: 'Claude Dashboard',
         tooltip: 'Claude Code Dashboard',
         items: [

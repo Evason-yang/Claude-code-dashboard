@@ -686,16 +686,63 @@ function loadSettings() {
   try { return JSON.parse(readFileSync(SETTINGS_PATH, 'utf8')) } catch { return {} }
 }
 
-const AVAILABLE_MODELS = [
-  { id: 'claude-opus-4-6',   label: 'Claude Opus 4.6',   desc: '最强能力，适合复杂任务' },
-  { id: 'claude-opus-4-6[1m]', label: 'Claude Opus 4.6 (1M)', desc: '超长上下文版本' },
-  { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', desc: '平衡性能与速度' },
-  { id: 'claude-haiku-4-5',  label: 'Claude Haiku 4.5',  desc: '最快速度，适合简单任务' },
+// 内置降级列表，当 API 不可用时使用
+const FALLBACK_MODELS = [
+  { id: 'claude-opus-4-8',      label: 'Claude Opus 4.8',      desc: '最强能力，适合复杂任务' },
+  { id: 'claude-opus-4-8[1m]',  label: 'Claude Opus 4.8 (1M)', desc: '超长上下文版本' },
+  { id: 'claude-sonnet-4-8',    label: 'Claude Sonnet 4.8',    desc: '平衡性能与速度' },
+  { id: 'claude-haiku-4-7',     label: 'Claude Haiku 4.7',     desc: '最快速度，适合简单任务' },
+  { id: 'claude-opus-4-7',      label: 'Claude Opus 4.7',      desc: '最强能力，适合复杂任务' },
+  { id: 'claude-opus-4-7[1m]',  label: 'Claude Opus 4.7 (1M)', desc: '超长上下文版本' },
+  { id: 'claude-sonnet-4-7',    label: 'Claude Sonnet 4.7',    desc: '平衡性能与速度' },
+  { id: 'claude-haiku-4-6',     label: 'Claude Haiku 4.6',     desc: '最快速度，适合简单任务' },
+  { id: 'claude-opus-4-6',      label: 'Claude Opus 4.6',      desc: '最强能力，适合复杂任务' },
+  { id: 'claude-opus-4-6[1m]',  label: 'Claude Opus 4.6 (1M)', desc: '超长上下文版本' },
+  { id: 'claude-sonnet-4-6',    label: 'Claude Sonnet 4.6',    desc: '平衡性能与速度' },
+  { id: 'claude-haiku-4-5',     label: 'Claude Haiku 4.5',     desc: '最快速度，适合简单任务' },
 ]
 
-app.get('/api/models', (req, res) => {
+const _modelsCache = { data: null, expiry: 0 }
+
+async function fetchAvailableModels() {
+  if (_modelsCache.data && Date.now() < _modelsCache.expiry) return _modelsCache.data
+
+  const baseUrl = (process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/$/, '')
+  const apiKey  = process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return FALLBACK_MODELS
+
+  try {
+    const res = await fetch(`${baseUrl}/v1/models?limit=100`, {
+      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      signal: AbortSignal.timeout(5000)
+    })
+    if (!res.ok) return FALLBACK_MODELS
+    const data = await res.json()
+    const apiModels = (data.data || [])
+      .filter(m => m.id)
+      .map(m => ({
+        id: m.id,
+        label: m.display_name || m.id,
+        desc: FALLBACK_MODELS.find(f => f.id === m.id)?.desc || ''
+      }))
+    // 合并：Claude 内置模型排前，再追加 API 独有的模型
+    const models = [
+      ...FALLBACK_MODELS,
+      ...apiModels.filter(m => !FALLBACK_MODELS.some(f => f.id === m.id))
+    ]
+    if (models.length === 0) return FALLBACK_MODELS
+    _modelsCache.data = models
+    _modelsCache.expiry = Date.now() + 10 * 60 * 1000  // 缓存 10 分钟
+    return models
+  } catch {
+    return FALLBACK_MODELS
+  }
+}
+
+app.get('/api/models', async (req, res) => {
   const settings = loadSettings()
-  res.json({ current: settings.model || 'claude-opus-4-6', available: AVAILABLE_MODELS })
+  const available = await fetchAvailableModels()
+  res.json({ current: settings.model || 'claude-opus-4-6', available })
 })
 
 app.put('/api/models', (req, res) => {
