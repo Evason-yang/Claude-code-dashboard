@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { ResumeCopyButton } from './MessageThread.jsx'
 
 function highlight(text, query) {
   if (!query || !text) return text
@@ -199,12 +200,17 @@ export default function GlobalSearchPage() {
                       {new Date(r.sessionTs).toLocaleDateString('zh-CN')}
                     </span>
                   )}
-                  {/* 跳转到项目会话历史 */}
+                  {/* 复制 resume 命令 */}
+                  <ResumeCopyButton sessionId={r.sessionId} />
+                  {/* 跳转到对应会话并定位 */}
                   <span
-                    onClick={e => { e.stopPropagation(); navigate(`/projects/${group.id}/sessions`) }}
-                    title="在会话历史中查看"
-                    style={{ fontSize: 11, color: 'var(--text2)', cursor: 'pointer', padding: '0 4px', flexShrink: 0 }}
-                  >↗</span>
+                    onClick={e => {
+                      e.stopPropagation()
+                      navigate(`/projects/${group.id}/sessions?session=${encodeURIComponent(r.sessionId)}&q=${encodeURIComponent(query)}`)
+                    }}
+                    title="打开该会话并定位到命中位置"
+                    style={{ fontSize: 11, color: 'var(--accent)', cursor: 'pointer', padding: '0 4px', flexShrink: 0, fontWeight: 500 }}
+                  >查看会话 ↗</span>
                   <span style={{ fontSize: 10, color: 'var(--text2)', flexShrink: 0 }}>{isOpen ? '▲' : '▼'}</span>
                 </div>
 
@@ -215,7 +221,11 @@ export default function GlobalSearchPage() {
                         <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 3, background: m.role === 'user' ? 'var(--accent-bg)' : 'var(--bg3)', color: m.role === 'user' ? 'var(--accent)' : 'var(--text2)', flexShrink: 0, marginTop: 1 }}>
                           {m.role === 'user' ? '用户' : 'Claude'}
                         </span>
-                        <div style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.6, wordBreak: 'break-word' }}>
+                        <div
+                          onClick={() => navigate(`/projects/${group.id}/sessions?session=${encodeURIComponent(r.sessionId)}&q=${encodeURIComponent(query)}`)}
+                          title="打开该会话并定位到命中位置"
+                          style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.6, wordBreak: 'break-word', cursor: 'pointer' }}
+                        >
                           {highlight(m.snippet, query)}
                         </div>
                       </div>

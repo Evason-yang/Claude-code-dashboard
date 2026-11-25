@@ -1,4 +1,6 @@
 import React, { useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { ResumeCopyButton } from './MessageThread.jsx'
 
 function highlight(text, query) {
   if (!query) return text
@@ -34,6 +36,7 @@ export default function SessionSearchTab({ project }) {
   const [showHistory, setShowHistory] = useState(false)
   const [history, setHistory] = useState(getHistory)
   const inputRef = useRef(null)
+  const navigate = useNavigate()
 
   async function search(q) {
     if (!q || q.trim().length < 1) return
@@ -146,6 +149,17 @@ export default function SessionSearchTab({ project }) {
                 {new Date(r.sessionTs).toLocaleDateString('zh-CN')}
               </span>
             )}
+            {/* 复制 resume 命令 */}
+            <ResumeCopyButton sessionId={r.sessionId} />
+            {/* 跳转到对应会话并定位 */}
+            <span
+              onClick={e => {
+                e.stopPropagation()
+                navigate(`/projects/${project.id}/sessions?session=${encodeURIComponent(r.sessionId)}&q=${encodeURIComponent(query)}`)
+              }}
+              title="打开该会话并定位到命中位置"
+              style={{ fontSize: 11, color: 'var(--accent)', cursor: 'pointer', padding: '0 4px', flexShrink: 0, fontWeight: 500 }}
+            >查看会话 ↗</span>
             <span style={{ fontSize: 10, color: 'var(--text2)', flexShrink: 0 }}>
               {expanded[r.sessionId] ? '▲' : '▼'}
             </span>
@@ -158,7 +172,11 @@ export default function SessionSearchTab({ project }) {
                   <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 3, background: m.role === 'user' ? 'var(--accent-bg)' : 'var(--bg3)', color: m.role === 'user' ? 'var(--accent)' : 'var(--text2)', flexShrink: 0, marginTop: 1 }}>
                     {m.role === 'user' ? '用户' : 'Claude'}
                   </span>
-                  <div style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.6, wordBreak: 'break-word' }}>
+                  <div
+                    onClick={() => navigate(`/projects/${project.id}/sessions?session=${encodeURIComponent(r.sessionId)}&q=${encodeURIComponent(query)}`)}
+                    title="打开该会话并定位到命中位置"
+                    style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.6, wordBreak: 'break-word', cursor: 'pointer' }}
+                  >
                     {highlight(m.snippet, query)}
                   </div>
                 </div>

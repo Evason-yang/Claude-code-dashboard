@@ -67,6 +67,53 @@ export function duration(start, end) {
   return `${h} 小时 ${m % 60} 分钟`
 }
 
+// 按关键词高亮文本（全部命中，不区分大小写）
+function highlightText(text, query) {
+  if (!query || !text) return text
+  const lower = text.toLowerCase()
+  const q = query.toLowerCase()
+  const parts = []
+  let i = 0
+  let idx
+  while ((idx = lower.indexOf(q, i)) !== -1) {
+    if (idx > i) parts.push(text.slice(i, idx))
+    parts.push(
+      <mark key={idx} data-search-hit="1" style={{ background: 'var(--accent)44', color: 'var(--text)', borderRadius: 2, padding: '0 1px' }}>
+        {text.slice(idx, idx + query.length)}
+      </mark>
+    )
+    i = idx + q.length
+  }
+  if (parts.length === 0) return text
+  if (i < text.length) parts.push(text.slice(i))
+  return parts
+}
+
+// 复制 claude --resume 命令的小按钮
+export function ResumeCopyButton({ sessionId }) {
+  const [copied, setCopied] = useState(false)
+  function copy(e) {
+    e.stopPropagation()
+    navigator.clipboard.writeText(`claude --resume ${sessionId}`)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+  return (
+    <button
+      onClick={copy}
+      title={`复制：claude --resume ${sessionId}`}
+      style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 3, cursor: 'pointer', padding: '1px 6px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}
+    >
+      <code style={{ fontSize: 10, color: copied ? 'var(--accent)' : 'var(--text2)', fontFamily: 'monospace' }}>
+        {sessionId.slice(0, 8)}…
+      </code>
+      <span style={{ fontSize: 10, color: copied ? 'var(--accent)' : 'var(--text2)' }}>
+        {copied ? '✓' : '⎘'}
+      </span>
+    </button>
+  )
+}
+
 export function ModelBadge({ model }) {
   if (!model || model === '<synthetic>') return null
   const color = MODEL_COLORS[model] || MODEL_COLORS.default
@@ -155,7 +202,7 @@ function msgTime(iso) {
 }
 
 // 消息气泡
-function MessageBubble({ m }) {
+function MessageBubble({ m, highlightQuery }) {
   const isUser = m.role === 'user'
   const u = m.usage
   // token 信息：只有 assistant 有 usage，展示 output（本次生成量）
@@ -175,7 +222,9 @@ function MessageBubble({ m }) {
         color: 'var(--text)',
         border: isUser ? '1px solid var(--accent)22' : '1px solid var(--border)',
       }}>
-        {m.content || <span style={{ color: 'var(--text2)', fontStyle: 'italic' }}>（工具调用）</span>}
+        {m.content
+          ? highlightText(m.content, highlightQuery)
+          : <span style={{ color: 'var(--text2)', fontStyle: 'italic' }}>（工具调用）</span>}
       </div>
       {/* 时间 + token（气泡下方小字，与气泡同侧对齐） */}
       {(timeStr || tokenInfo) && (
@@ -192,7 +241,7 @@ function MessageBubble({ m }) {
  * 完整消息线程，加载后自动滚到最后一条。
  * maxHeight: 容器最大高度（px），默认 520
  */
-export function MessageThread({ projectId, sessionId, maxHeight = 520 }) {
+export function MessageThread({ projectId, sessionId, maxHeight = 520, highlightQuery = '' }) {
   const [messages, setMessages] = useState(null)
   const containerRef = useRef(null)
 
@@ -213,12 +262,19 @@ export function MessageThread({ projectId, sessionId, maxHeight = 520 }) {
       })
   }, [projectId, sessionId])
 
-  // 加载完成后直接跳到底部，不用动画
+  // 加载完成后：有搜索关键词则跳到第一处命中，否则跳到底部
   useEffect(() => {
-    if (messages && containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight
+    const el = containerRef.current
+    if (!messages || !el) return
+    if (highlightQuery) {
+      const hit = el.querySelector('mark[data-search-hit]')
+      if (hit) {
+        hit.scrollIntoView({ block: 'center' })
+        return
+      }
     }
-  }, [messages])
+    el.scrollTop = el.scrollHeight
+  }, [messages, highlightQuery])
 
   if (messages === null) {
     return (
@@ -238,7 +294,7 @@ export function MessageThread({ projectId, sessionId, maxHeight = 520 }) {
       {nodes.map(node =>
         node.type === 'agent'
           ? <AgentBlock key={node.key} callMsg={node.call} resultMsg={node.result} />
-          : <MessageBubble key={node.key} m={node.msg} />
+          : <MessageBubble key={node.key} m={node.msg} highlightQuery={highlightQuery} />
       )}
     </div>
   )
